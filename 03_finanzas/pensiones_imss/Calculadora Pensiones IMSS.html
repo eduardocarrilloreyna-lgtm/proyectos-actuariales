@@ -1,0 +1,3425 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Calculadora IMSS Avanzada · Ley 73 + Ley 97 + Modalidad 40 · Eduardo Carrillo Reyna</title>
+<meta name="description" content="Simulador actuarial profesional IMSS Ley 1973 / Ley 97, Modalidad 40 prospectiva y retroactiva, financiamiento bancario, análisis por edades 60-65 y costo de oportunidad. Versión Mayo 2026." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- LIBRERÍAS POR CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* =========================================================
+   DESIGN TOKENS — Paleta institucional IMSS
+   ========================================================= */
+:root {
+  --imss-azul-oscuro: #1F3864;
+  --imss-azul-medio: #2E75B6;
+  --imss-gris: #D9E1F2;
+  --imss-amarillo: #FFF2CC;
+  --imss-verde: #548235;
+  --imss-rojo: #C00000;
+
+  --bg: #F5F7FB;
+  --surface: #FFFFFF;
+  --surface-alt: #F1F4FA;
+  --surface-hi: #ECEFF7;
+  --border: #DDE3EE;
+  --border-strong: #C5CEDD;
+  --text: #1A2238;
+  --text-muted: #5E6A82;
+  --text-soft: #8A95AC;
+
+  --primary: var(--imss-azul-oscuro);
+  --primary-700: #15294a;
+  --primary-300: #4A6CA8;
+  --primary-100: #E7ECF6;
+  --accent: var(--imss-azul-medio);
+  --accent-700: #205D94;
+  --accent-100: #DCEBF7;
+
+  --success: var(--imss-verde);
+  --success-bg: #E8F0DE;
+  --warn: #B07F11;
+  --warn-bg: var(--imss-amarillo);
+  --danger: var(--imss-rojo);
+  --danger-bg: #F8DCDC;
+  --info-bg: var(--imss-gris);
+
+  --radius-sm: 6px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --shadow-sm: 0 1px 2px rgba(31,56,100,.06), 0 1px 1px rgba(31,56,100,.04);
+  --shadow: 0 4px 14px rgba(31,56,100,.08), 0 1px 2px rgba(31,56,100,.04);
+  --shadow-lg: 0 24px 48px -16px rgba(31,56,100,.20), 0 4px 10px rgba(31,56,100,.06);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+[data-theme="dark"] {
+  --bg: #0B132A;
+  --surface: #142139;
+  --surface-alt: #1B294A;
+  --surface-hi: #21325A;
+  --border: #243661;
+  --border-strong: #34487A;
+  --text: #E8EDF7;
+  --text-muted: #A3AEC5;
+  --text-soft: #76849F;
+  --primary: #4A8BFF;
+  --primary-700: #2C6CDF;
+  --primary-300: #6FA4FF;
+  --primary-100: #1E2D52;
+  --accent: #5EA8E3;
+  --accent-700: #3E84BD;
+  --accent-100: #1B2D45;
+  --success: #5CC07C;
+  --success-bg: #163524;
+  --warn: #E0B14F;
+  --warn-bg: #3B2D11;
+  --danger: #E47373;
+  --danger-bg: #3A1A1A;
+  --info-bg: #1F2E50;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+  --shadow: 0 4px 14px rgba(0,0,0,.4);
+  --shadow-lg: 0 24px 48px -16px rgba(0,0,0,.5);
+}
+
+/* =========================================================
+   RESET & BASE
+   ========================================================= */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01","cv11";
+  min-height: 100vh;
+}
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, select, textarea { font-family: inherit; color: inherit; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* =========================================================
+   LAYOUT BASE
+   ========================================================= */
+.app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.app > div:nth-child(2) { min-width: 0; overflow-x: hidden; }
+@media (max-width: 980px) { .app { grid-template-columns: 1fr; } }
+body { overflow-x: hidden; }
+
+/* ----- SIDEBAR (navegación sticky) ----- */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  position: sticky; top: 0; align-self: start;
+  height: 100vh; overflow-y: auto;
+  padding: 18px 14px;
+}
+.sidebar h1 {
+  font-size: 14px; font-weight: 800; letter-spacing: .02em;
+  color: var(--primary); margin-bottom: 4px;
+}
+.sidebar .sub {
+  font-size: 11px; color: var(--text-muted); margin-bottom: 16px;
+}
+.sidebar nav { display: flex; flex-direction: column; gap: 2px; }
+.sidebar nav a {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: var(--radius-sm);
+  font-size: 12.5px; color: var(--text-muted); font-weight: 500;
+  border-left: 3px solid transparent;
+}
+.sidebar nav a:hover { background: var(--surface-alt); color: var(--text); text-decoration: none; }
+.sidebar nav a.active { background: var(--primary-100); color: var(--primary); border-left-color: var(--primary); font-weight: 600; }
+.sidebar nav a .num { font-size: 10px; font-weight: 700; color: var(--text-soft); width: 18px; }
+.sidebar nav a.active .num { color: var(--primary); }
+@media (max-width: 980px) {
+  .sidebar { position: relative; height: auto; max-height: none; border-right: none; border-bottom: 1px solid var(--border); padding: 10px 14px; overflow-y: visible; }
+  .sidebar h1 { font-size: 13px; margin-bottom: 2px; }
+  .sidebar .sub { display: none; }
+  .sidebar nav { flex-direction: row; flex-wrap: nowrap; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+  .sidebar nav a { padding: 5px 8px; font-size: 11.5px; border-left: none; border-bottom: 2px solid transparent; white-space: nowrap; flex-shrink: 0; }
+  .sidebar nav a.active { border-left: none; border-bottom-color: var(--primary); }
+  .sidebar nav a .num { display: none; }
+  .topbar { padding: 10px 14px; }
+  .topbar-title { display: none; }
+}
+
+/* ----- HEADER ----- */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(255,255,255,.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 26px;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+}
+[data-theme="dark"] .topbar { background: rgba(20,33,57,.9); }
+.topbar-title { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.topbar-title strong { color: var(--text); font-weight: 700; }
+.topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: var(--radius-sm);
+  font-size: 12.5px; font-weight: 600;
+  background: var(--surface-alt); color: var(--text);
+  border: 1px solid var(--border);
+  transition: background .15s, transform .15s, border .15s;
+}
+.btn:hover { background: var(--surface-hi); transform: translateY(-1px); }
+.btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-700); border-color: var(--primary-700); }
+.btn-accent { background: var(--accent); color: white; border-color: var(--accent); }
+.btn-accent:hover { background: var(--accent-700); border-color: var(--accent-700); }
+.btn-ghost { background: transparent; }
+.btn-sm { padding: 5px 10px; font-size: 11.5px; }
+.btn-lg { padding: 11px 22px; font-size: 14px; }
+.btn svg { width: 14px; height: 14px; }
+
+/* ----- MAIN ----- */
+.main { padding: 28px 28px 80px; max-width: 1320px; width: 100%; }
+@media (max-width: 600px) { .main { padding: 18px 14px 50px; } }
+
+.hero {
+  background: linear-gradient(135deg, var(--primary), var(--primary-700));
+  color: white; border-radius: var(--radius-lg);
+  padding: 30px 32px; margin-bottom: 26px;
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content:""; position:absolute; right:-60px; top:-60px;
+  width: 280px; height: 280px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(46,117,182,.35), transparent 70%);
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px;
+  background: rgba(255,242,204,.15); border: 1px solid rgba(255,242,204,.35);
+  border-radius: 999px; font-size: 11.5px; font-weight: 600; color: var(--imss-amarillo);
+  margin-bottom: 12px;
+}
+.hero h2 { font-size: clamp(22px, 3vw, 30px); font-weight: 800; letter-spacing: -.02em; margin-bottom: 8px; position: relative; }
+.hero p { color: rgba(255,255,255,.85); font-size: 14.5px; max-width: 760px; position: relative; }
+.hero-meta {
+  display: flex; gap: 18px; margin-top: 14px; font-size: 12px; color: rgba(255,255,255,.7);
+  flex-wrap: wrap; position: relative;
+}
+.hero-meta span strong { color: white; }
+
+/* ----- SECTIONS / CARDS ----- */
+.section {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+  margin-bottom: 24px; overflow: hidden;
+}
+.section-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 18px 22px; border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.section-head h3 {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px; font-weight: 800; color: var(--primary);
+  text-transform: uppercase; letter-spacing: .03em;
+}
+.section-head h3 .step-num {
+  width: 26px; height: 26px; border-radius: 6px;
+  background: var(--primary); color: white;
+  display: grid; place-items: center;
+  font-size: 12px; font-weight: 700;
+}
+.section-head .meta { font-size: 11.5px; color: var(--text-muted); }
+.section-body { padding: 22px; }
+.section-body.tight { padding: 16px 22px; }
+
+details.section > summary {
+  list-style: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px; border-bottom: 1px solid var(--border);
+}
+details.section > summary::-webkit-details-marker { display: none; }
+details.section > summary h3 {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px; font-weight: 800; color: var(--primary);
+  text-transform: uppercase; letter-spacing: .03em;
+}
+details.section > summary h3 .step-num {
+  width: 26px; height: 26px; border-radius: 6px;
+  background: var(--primary); color: white;
+  display: grid; place-items: center;
+  font-size: 12px; font-weight: 700;
+}
+details.section > summary .chev {
+  width: 20px; height: 20px; transition: transform .2s;
+  color: var(--text-muted);
+}
+details[open].section > summary .chev { transform: rotate(180deg); }
+details.section[open] > summary { border-bottom: 1px solid var(--border); }
+details.section > summary:hover { background: var(--surface-alt); }
+
+/* ----- FORM ----- */
+.field-group { display: grid; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.field-row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 700px) {
+  .field-row, .field-row-3, .field-row-4 { grid-template-columns: 1fr; }
+}
+.field label {
+  font-size: 12.5px; font-weight: 600; color: var(--text);
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 6px;
+}
+.field label .hint { font-weight: 500; color: var(--text-soft); font-size: 11px; }
+.field label .info {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--surface-alt); color: var(--text-muted);
+  display: inline-grid; place-items: center;
+  font-size: 9px; font-weight: 800; cursor: help;
+  border: 1px solid var(--border);
+}
+.input, .select, textarea.input {
+  width: 100%; padding: 9px 12px; background: var(--surface-alt);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 13.5px; transition: border .15s, background .15s, box-shadow .15s;
+  font-variant-numeric: tabular-nums; color: var(--text);
+}
+.input:focus, .select:focus, textarea.input:focus {
+  outline: none; border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(31,56,100,.10); background: var(--surface);
+}
+.input.small { padding: 6px 9px; font-size: 12px; }
+textarea.input { resize: vertical; min-height: 80px; }
+.input-prefix-wrap { position: relative; }
+.input-prefix-wrap .prefix {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  font-size: 12px; color: var(--text-soft); pointer-events: none;
+}
+.input-prefix-wrap .input { padding-left: 22px; }
+.field .row-inline { display: flex; gap: 10px; align-items: center; }
+.field .row-inline .input { flex: 1; }
+
+/* Checkbox / Switch */
+.check {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  background: var(--surface-alt); border-radius: var(--radius-sm);
+  border: 1px solid var(--border); cursor: pointer;
+  font-size: 12.5px;
+}
+.check input { accent-color: var(--primary); width: 14px; height: 14px; }
+
+/* Segmented */
+.segmented {
+  display: inline-flex; padding: 3px; background: var(--surface-alt);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.segmented button {
+  padding: 5px 12px; font-size: 11.5px; font-weight: 600;
+  color: var(--text-muted); border-radius: 5px;
+}
+.segmented button.active { background: var(--primary); color: white; }
+
+/* Tags / Badges */
+.tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em;
+  background: var(--surface-alt); color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.tag-oficial { background: var(--info-bg); color: var(--primary); border-color: transparent; }
+.tag-editable { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+.tag-estimado { background: var(--accent-100); color: var(--accent-700); border-color: transparent; }
+.tag-success { background: var(--success-bg); color: var(--success); border-color: transparent; }
+.tag-danger { background: var(--danger-bg); color: var(--danger); border-color: transparent; }
+.tag-warn { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+
+/* Alert */
+.alert {
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  font-size: 13px; margin: 12px 0;
+  border-left: 3px solid;
+}
+.alert-info { background: var(--info-bg); color: var(--primary); border-color: var(--primary); }
+.alert-warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); }
+.alert-danger { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+.alert-success { background: var(--success-bg); color: var(--success); border-color: var(--success); }
+.alert strong { display: block; margin-bottom: 4px; }
+
+/* Tables */
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.tbl {
+  width: 100%; border-collapse: collapse; font-size: 12.5px;
+  font-variant-numeric: tabular-nums; min-width: 600px;
+}
+.tbl th, .tbl td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.tbl th {
+  background: var(--surface-alt); font-weight: 700; color: var(--primary);
+  text-transform: uppercase; font-size: 10.5px; letter-spacing: .03em;
+  position: sticky; top: 0; z-index: 1;
+}
+.tbl td.num, .tbl th.num { text-align: right; font-family: var(--mono); }
+.tbl tr:hover td { background: var(--surface-alt); }
+.tbl tr.total td { font-weight: 700; background: var(--surface-hi); border-top: 2px solid var(--primary); }
+.tbl tr.row-highlight td { background: var(--warn-bg); }
+.tbl tr.row-best td { background: var(--success-bg); }
+.tbl tr.row-bad td { background: var(--danger-bg); }
+.tbl .semaforo { font-size: 16px; }
+
+/* KPI cards */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap: 12px; }
+.kpi {
+  background: var(--surface-alt); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+}
+.kpi .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; margin-bottom: 4px; }
+.kpi .value { font-size: 18px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.kpi .value.lg { font-size: 22px; }
+.kpi .sub { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+.kpi.good { background: var(--success-bg); border-color: var(--success); }
+.kpi.good .value { color: var(--success); }
+.kpi.bad { background: var(--danger-bg); border-color: var(--danger); }
+.kpi.bad .value { color: var(--danger); }
+.kpi.warn { background: var(--warn-bg); border-color: var(--warn); }
+.kpi.warn .value { color: var(--warn); }
+.kpi.primary { background: var(--primary); color: white; border-color: var(--primary); }
+.kpi.primary .label, .kpi.primary .value, .kpi.primary .sub { color: white; }
+.kpi.primary .label { color: rgba(255,255,255,.75); }
+
+/* Drag & Drop area */
+.dropzone {
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius);
+  padding: 36px 22px;
+  text-align: center;
+  background: var(--surface-alt);
+  transition: background .15s, border .15s;
+  cursor: pointer;
+}
+.dropzone:hover, .dropzone.dragover {
+  border-color: var(--primary); background: var(--primary-100);
+}
+.dropzone svg { width: 42px; height: 42px; color: var(--primary); margin-bottom: 10px; }
+.dropzone h4 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.dropzone p { font-size: 12.5px; color: var(--text-muted); }
+.dropzone-tabs {
+  display: inline-flex; gap: 2px; margin-bottom: 14px;
+  background: var(--surface-alt); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 3px;
+}
+.dropzone-tabs button {
+  padding: 6px 14px; font-size: 12px; font-weight: 600;
+  color: var(--text-muted); border-radius: 5px;
+}
+.dropzone-tabs button.active { background: var(--primary); color: white; }
+
+/* Progress bar */
+.progress {
+  width: 100%; height: 8px; background: var(--surface-hi);
+  border-radius: 99px; overflow: hidden;
+  margin: 10px 0 6px;
+}
+.progress > div {
+  height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent));
+  transition: width .3s;
+  width: 0%;
+}
+.progress-steps {
+  display: flex; gap: 12px; font-size: 11.5px; color: var(--text-muted);
+  flex-wrap: wrap;
+}
+.progress-step { display: flex; align-items: center; gap: 5px; }
+.progress-step::before {
+  content: ""; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--border); display: inline-block;
+}
+.progress-step.done::before { background: var(--success); }
+.progress-step.active::before { background: var(--accent); animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+/* Confianza visual */
+.conf-high { color: var(--success); font-weight: 700; }
+.conf-med  { color: var(--warn); font-weight: 700; }
+.conf-low  { color: var(--danger); font-weight: 700; }
+
+/* Charts */
+.chart-wrap {
+  background: var(--surface-alt); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px;
+  position: relative; height: 320px;
+}
+.chart-wrap canvas { max-height: 100% !important; }
+.chart-wrap h5 {
+  font-size: 12.5px; font-weight: 700; color: var(--primary);
+  text-transform: uppercase; letter-spacing: .03em; margin-bottom: 6px;
+}
+.chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px,1fr)); gap: 14px; }
+@media (max-width: 700px) { .chart-grid { grid-template-columns: 1fr; } .chart-wrap { height: 280px; } }
+
+/* Scenario card */
+.scen-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 14px; }
+.scen-card {
+  background: var(--surface-alt); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  position: relative;
+}
+.scen-card.best { border-color: var(--success); background: linear-gradient(180deg, var(--success-bg) 0%, var(--surface-alt) 60%); }
+.scen-card.bad { border-color: var(--danger); }
+.scen-card h4 { font-size: 14px; font-weight: 800; color: var(--primary); margin-bottom: 2px; }
+.scen-card .scen-tag { position: absolute; top: 10px; right: 10px; }
+.scen-card .scen-sub { font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px; }
+.scen-card .scen-main {
+  font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums;
+  color: var(--primary); margin: 8px 0 2px;
+}
+.scen-card .scen-period { font-size: 11.5px; color: var(--text-muted); margin-bottom: 12px; }
+.scen-card ul { list-style: none; font-size: 12.5px; }
+.scen-card ul li {
+  display: flex; justify-content: space-between; padding: 4px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.scen-card ul li:last-child { border-bottom: none; }
+.scen-card ul li b { font-family: var(--mono); }
+
+/* Hr */
+hr.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+/* Recomendation panel */
+.reco {
+  background: linear-gradient(135deg, var(--accent-100), var(--surface));
+  border: 1px solid var(--accent);
+  border-radius: var(--radius); padding: 20px 22px;
+  position: relative; overflow: hidden;
+}
+.reco::before {
+  content: "💡"; position: absolute; top: -10px; right: -10px;
+  font-size: 100px; opacity: .07;
+}
+.reco h4 { font-size: 13px; font-weight: 800; color: var(--accent-700); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 8px; }
+.reco p { font-size: 14px; line-height: 1.6; margin-bottom: 10px; }
+.reco p:last-child { margin-bottom: 0; }
+.reco .key { font-weight: 700; color: var(--primary); }
+
+/* Footer */
+.footer {
+  margin-top: 60px; padding: 26px 0; border-top: 1px solid var(--border);
+  font-size: 12px; color: var(--text-muted); line-height: 1.6;
+}
+.footer strong { color: var(--text); }
+
+/* Sticky FAB ir arriba */
+.fab {
+  position: fixed; bottom: 22px; right: 22px;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--primary); color: white;
+  display: grid; place-items: center;
+  box-shadow: var(--shadow);
+  z-index: 100; cursor: pointer;
+  transition: transform .2s;
+}
+.fab:hover { transform: translateY(-2px); }
+.fab svg { width: 18px; height: 18px; }
+
+/* Helpers */
+.muted { color: var(--text-muted); }
+.text-sm { font-size: 12px; }
+.text-xs { font-size: 11px; }
+.text-bold { font-weight: 700; }
+.center { text-align: center; }
+.right { text-align: right; }
+.spaced { display: flex; gap: 10px; align-items: center; }
+.spaced-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hidden { display: none !important; }
+.mt-8 { margin-top: 8px; } .mt-12 { margin-top: 12px; } .mt-16 { margin-top: 16px; } .mt-24 { margin-top: 24px; }
+.mb-8 { margin-bottom: 8px; } .mb-12 { margin-bottom: 12px; } .mb-16 { margin-bottom: 16px; }
+
+/* Tooltip */
+[title] { cursor: help; }
+
+/* Print */
+@media print {
+  .sidebar, .topbar, .fab, .no-print, button { display: none !important; }
+  body { background: white; color: black; font-size: 11px; }
+  .main { padding: 0; max-width: 100%; }
+  .section { box-shadow: none; border: 1px solid #999; page-break-inside: avoid; }
+  .hero { background: #1F3864 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .chart-wrap { height: 240px; }
+  .tbl { font-size: 10px; min-width: 0; }
+  a { color: inherit; text-decoration: none; }
+}
+
+/* SVG icons reusable */
+.ic { width: 16px; height: 16px; vertical-align: middle; }
+
+/* Editable parameter inputs */
+.param-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 12px; }
+.param-grid .field label { font-size: 11.5px; }
+</style>
+</head>
+<body data-theme="light">
+
+<div class="app">
+
+<!-- =========================================================
+     SIDEBAR NAV
+     ========================================================= -->
+<aside class="sidebar">
+  <h1>Calculadora IMSS</h1>
+  <p class="sub">Ley 73 · Ley 97 · Modalidad 40<br>Mayo 2026</p>
+  <nav id="sidenav">
+    <a href="#sec-constancia" data-target="sec-constancia"><span class="num">1</span> Constancia IMSS</a>
+    <a href="#sec-datos" data-target="sec-datos"><span class="num">2</span> Datos del trabajador</a>
+    <a href="#sec-regimen" data-target="sec-regimen"><span class="num">3</span> Régimen aplicable</a>
+    <a href="#sec-pension" data-target="sec-pension"><span class="num">4</span> Pensión Ley 73</a>
+    <a href="#sec-edades" data-target="sec-edades"><span class="num">5</span> Edades 60–65</a>
+    <a href="#sec-oportunidad" data-target="sec-oportunidad"><span class="num">6</span> Costo oportunidad</a>
+    <a href="#sec-m40-prosp" data-target="sec-m40-prosp"><span class="num">7</span> M40 Prospectiva</a>
+    <a href="#sec-m40-retro" data-target="sec-m40-retro"><span class="num">8</span> M40 Retroactiva</a>
+    <a href="#sec-financia" data-target="sec-financia"><span class="num">9</span> Financiamiento</a>
+    <a href="#sec-ley97" data-target="sec-ley97"><span class="num">10</span> Ley 73 vs Ley 97</a>
+    <a href="#sec-resumen" data-target="sec-resumen"><span class="num">11</span> Resumen maestro</a>
+    <a href="#sec-reco" data-target="sec-reco"><span class="num">12</span> Recomendación</a>
+    <a href="#sec-supuestos" data-target="sec-supuestos"><span class="num">13</span> Supuestos</a>
+    <a href="#sec-formulas" data-target="sec-formulas"><span class="num">14</span> Fórmulas</a>
+    <a href="#sec-export" data-target="sec-export"><span class="num">15</span> Exportar</a>
+  </nav>
+</aside>
+
+<div>
+<!-- =========================================================
+     TOPBAR
+     ========================================================= -->
+<div class="topbar">
+  <div class="topbar-title">
+    <strong>Calculadora IMSS Avanzada</strong> · Eduardo Carrillo Reyna
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-sm" id="btn-demo" title="Carga un caso de ejemplo">📊 Datos demo</button>
+    <button class="btn btn-sm" id="btn-recalc">⚙ Recalcular</button>
+    <button class="btn btn-sm" id="btn-theme" title="Cambiar a modo oscuro/claro">🌓 Tema</button>
+    <button class="btn btn-sm" id="btn-print">🖨 Imprimir / PDF</button>
+  </div>
+</div>
+
+<main class="main">
+
+<!-- =========================================================
+     HERO
+     ========================================================= -->
+<section class="hero">
+  <div class="hero-badge">Modelo actuarial actualizado · Mayo 2026</div>
+  <h2>Simulador profesional de pensión IMSS</h2>
+  <p>Carga tu constancia IMSS, captura datos básicos o usa el ejemplo demo. La calculadora evalúa Ley 73, Ley 97, Modalidad 40 prospectiva, M40 retroactiva, financiamiento con 3 bancos, análisis por edades 60–65, costo de oportunidad mes a mes y emite una recomendación priorizada.</p>
+  <div class="hero-meta">
+    <span><strong>UMA diaria 2026:</strong> $117.31</span>
+    <span><strong>PMG Ley 73:</strong> $10,636.54</span>
+    <span><strong>PMG Ley 97:</strong> $7,811.68</span>
+    <span><strong>Factor Fox:</strong> 1.11</span>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECCIÓN 1 — CONSTANCIA IMSS
+     ========================================================= -->
+<section class="section" id="sec-constancia">
+  <div class="section-head">
+    <h3><span class="step-num">1</span> Lectura de constancia IMSS</h3>
+    <span class="meta">PDF · Imagen · Texto</span>
+  </div>
+  <div class="section-body">
+    <p class="muted text-sm mb-12">Carga tu <strong>Constancia de Semanas Cotizadas</strong> emitida por el IMSS. Soporta PDF (con texto o escaneado), imagen JPG/PNG y pegado directo. Los datos detectados serán pre-llenados en el formulario y podrás corregir cualquier campo.</p>
+
+    <div class="dropzone-tabs" role="tablist">
+      <button data-tab="pdf" class="active">📄 PDF</button>
+      <button data-tab="img">🖼 Imagen</button>
+      <button data-tab="txt">📋 Pegar texto</button>
+    </div>
+
+    <div id="tab-pdf" class="tab-panel">
+      <div class="dropzone" id="dz-pdf">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        <h4>Suelta el PDF aquí o haz clic</h4>
+        <p>PDFs con texto se procesan al instante. Escaneos pasan por OCR (Tesseract).</p>
+        <input type="file" id="file-pdf" accept="application/pdf" hidden>
+      </div>
+    </div>
+    <div id="tab-img" class="tab-panel hidden">
+      <div class="dropzone" id="dz-img">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5-9 9"/></svg>
+        <h4>Suelta imagen aquí o haz clic</h4>
+        <p>JPG / PNG. Procesado por OCR Tesseract (español).</p>
+        <input type="file" id="file-img" accept="image/*" hidden>
+      </div>
+    </div>
+    <div id="tab-txt" class="tab-panel hidden">
+      <textarea class="input" id="txt-paste" rows="8" placeholder="Pega aquí el contenido textual de la constancia IMSS (NSS, CURP, fechas, semanas, historial...). El parser detectará los campos automáticamente."></textarea>
+      <div class="spaced mt-12">
+        <button class="btn btn-primary btn-sm" id="btn-parse-txt">Analizar texto</button>
+      </div>
+    </div>
+
+    <div id="parse-progress" class="hidden">
+      <div class="progress"><div></div></div>
+      <div class="progress-steps">
+        <span class="progress-step" data-step="read">Leyendo archivo</span>
+        <span class="progress-step" data-step="extract">Extrayendo texto</span>
+        <span class="progress-step" data-step="detect">Detectando campos</span>
+        <span class="progress-step" data-step="validate">Validando</span>
+      </div>
+      <div id="parse-msg" class="text-xs muted mt-8"></div>
+    </div>
+
+    <div id="parse-result" class="hidden mt-16">
+      <div class="alert alert-success" id="parse-alert">
+        <strong>✓ Constancia procesada</strong>
+        <span id="parse-summary"></span>
+      </div>
+      <h4 class="mb-8 mt-12" style="font-size:13px;color:var(--primary);text-transform:uppercase;letter-spacing:.03em;">Campos detectados (editables)</h4>
+      <div class="tbl-wrap">
+        <table class="tbl" id="tbl-detectados">
+          <thead><tr><th>Campo</th><th>Valor detectado</th><th>Confianza</th><th>Acción</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <h4 class="mb-8 mt-16" style="font-size:13px;color:var(--primary);text-transform:uppercase;letter-spacing:.03em;">Historial laboral detectado</h4>
+      <div class="tbl-wrap">
+        <table class="tbl" id="tbl-historial">
+          <thead><tr><th>#</th><th>Patrón</th><th>Alta</th><th>Baja</th><th class="num">SBC</th><th class="num">Semanas</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <h4 class="mb-8 mt-16" style="font-size:13px;color:var(--primary);text-transform:uppercase;letter-spacing:.03em;">Brechas sin cotizar detectadas</h4>
+      <div class="tbl-wrap">
+        <table class="tbl" id="tbl-brechas">
+          <thead><tr><th>#</th><th>Desde</th><th>Hasta</th><th class="num">Meses</th><th>Elegible retro M40</th><th>Incluir</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="mt-12 spaced">
+        <button class="btn btn-primary btn-sm" id="btn-aplicar-detec">Aplicar a formulario</button>
+        <button class="btn btn-sm" id="btn-cancelar-detec">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECCIÓN 2 — DATOS DEL TRABAJADOR
+     ========================================================= -->
+<section class="section" id="sec-datos">
+  <div class="section-head">
+    <h3><span class="step-num">2</span> Datos del trabajador</h3>
+    <span class="meta">Captura básica + recursos</span>
+  </div>
+  <div class="section-body">
+    <div class="field-group">
+      <div class="field-row">
+        <div class="field">
+          <label>Nombre completo <span class="info" title="Nombre del trabajador. Sólo informativo.">i</span></label>
+          <input class="input" id="i-nombre" type="text" placeholder="Eduardo Carrillo Reyna">
+        </div>
+        <div class="field">
+          <label>NSS <span class="info" title="Número de Seguridad Social (11 dígitos)">i</span></label>
+          <input class="input" id="i-nss" type="text" placeholder="11 dígitos">
+        </div>
+      </div>
+      <div class="field-row-3">
+        <div class="field">
+          <label>CURP</label>
+          <input class="input" id="i-curp" type="text" placeholder="18 caracteres" maxlength="18">
+        </div>
+        <div class="field">
+          <label>Fecha de nacimiento</label>
+          <input class="input" id="i-fechaNac" type="date">
+        </div>
+        <div class="field">
+          <label>Sexo</label>
+          <select class="select" id="i-sexo">
+            <option value="H">Hombre</option>
+            <option value="M">Mujer</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row-4">
+        <div class="field">
+          <label>Edad actual <span class="info" title="Calculada o capturada directamente">i</span></label>
+          <input class="input mono" id="i-edadActual" type="number" min="18" max="80" value="58">
+        </div>
+        <div class="field">
+          <label>Edad de retiro deseada</label>
+          <select class="select" id="i-edadRetiro">
+            <option>60</option><option>61</option><option>62</option><option>63</option><option>64</option><option selected>65</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Primera alta IMSS</label>
+          <input class="input" id="i-primeraAlta" type="date" value="1985-06-15">
+        </div>
+        <div class="field">
+          <label>Semanas cotizadas</label>
+          <input class="input mono" id="i-semanas" type="number" min="0" value="1450">
+        </div>
+      </div>
+      <div class="field-row-3">
+        <div class="field">
+          <label>Último SBC (diario) <span class="info" title="Salario Base de Cotización diario. Tope: 25 UMA = $2,932.75">i</span></label>
+          <div class="input-prefix-wrap"><span class="prefix">$</span><input class="input mono" id="i-sbcDiario" type="number" min="0" step="0.01" value="850"></div>
+          <span class="hint" id="hint-sbcMensual">= $25,840 mensual</span>
+        </div>
+        <div class="field">
+          <label>Estado civil</label>
+          <select class="select" id="i-estadoCivil">
+            <option value="casado">Casado/a (con cónyuge)</option>
+            <option value="soltero" selected>Soltero/a / sin cónyuge</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Hijos con derecho a asignación</label>
+          <input class="input mono" id="i-hijos" type="number" min="0" max="4" value="0">
+        </div>
+      </div>
+      <div class="field-row-3">
+        <label class="check"><input type="checkbox" id="i-ayudaAsist"> Aplicar ayuda asistencial (15%) si procede</label>
+        <label class="check"><input type="checkbox" id="i-fox" checked> Aplicar factor Fox (×1.11)</label>
+        <label class="check"><input type="checkbox" id="i-sigueCotiz" checked> Continúa cotizando actualmente</label>
+      </div>
+      <div class="field-row-3">
+        <div class="field">
+          <label>Saldo AFORE actual <span class="info" title="Saldo total en tu cuenta individual. Usado sólo para comparativo Ley 97.">i</span></label>
+          <div class="input-prefix-wrap"><span class="prefix">$</span><input class="input mono" id="i-afore" type="number" min="0" step="100" value="850000"></div>
+        </div>
+        <div class="field">
+          <label>Aportación mensual al AFORE</label>
+          <div class="input-prefix-wrap"><span class="prefix">$</span><input class="input mono" id="i-aporteAfore" type="number" min="0" step="100" value="6500"></div>
+        </div>
+        <div class="field">
+          <label>Capital disponible para M40</label>
+          <div class="input-prefix-wrap"><span class="prefix">$</span><input class="input mono" id="i-capitalDispo" type="number" min="0" step="1000" value="200000"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECCIÓN 3 — RÉGIMEN APLICABLE
+     ========================================================= -->
+<section class="section" id="sec-regimen">
+  <div class="section-head">
+    <h3><span class="step-num">3</span> Régimen aplicable</h3>
+    <span class="meta">Detección automática + simulación cruzada</span>
+  </div>
+  <div class="section-body">
+    <div id="regimen-resultado"></div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECCIÓN 4 — PENSIÓN LEY 73
+     ========================================================= -->
+<section class="section" id="sec-pension">
+  <div class="section-head">
+    <h3><span class="step-num">4</span> Pensión base Ley 73</h3>
+    <span class="meta">Art. 167 LSS · Factor edad · Asignaciones · Fox · PMG</span>
+  </div>
+  <div class="section-body">
+    <div id="pension-base"></div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECCIÓN 5 — ANÁLISIS POR EDADES 60-65
+     ========================================================= -->
+<section class="section" id="sec-edades">
+  <div class="section-head">
+    <h3><span class="step-num">5</span> Análisis por edades de retiro (60–65)</h3>
+    <span class="meta">Comparativa edad por edad</span>
+  </div>
+  <div class="section-body">
+    <p class="muted text-sm mb-12">Proyectamos pensión asumiendo que cada año adicional aporta semanas extra (si sigues cotizando con tu SBC actual). El semáforo combina mejora marginal, costo de esperar y meses para recuperar lo "perdido".</p>
+    <div class="tbl-wrap mb-16">
+      <table class="tbl" id="tbl-edades">
+        <thead><tr>
+          <th>Edad</th><th class="num">Semanas</th><th class="num">SBC prom.</th>
+          <th class="num">Pensión mensual</th><th class="num">Pensión anual</th>
+          <th>¿PMG?</th><th class="num">Costo de esperar</th>
+          <th class="num">Mejora vs edad anterior</th><th class="num">Meses recuperar</th>
+          <th>Conveniencia</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-wrap"><h5>Pensión mensual por edad</h5><canvas id="ch-edades-pension"></canvas></div>
+      <div class="chart-wrap"><h5>Costo de oportunidad acumulado al retirarse a edad X (vs. retiro a 60)</h5><canvas id="ch-edades-costo"></canvas></div>
+      <div class="chart-wrap"><h5>Meses para recuperar el costo de esperar</h5><canvas id="ch-edades-recuperar"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECCIÓN 6 — COSTO DE OPORTUNIDAD
+     ========================================================= -->
+<section class="section" id="sec-oportunidad">
+  <div class="section-head">
+    <h3><span class="step-num">6</span> Costo de oportunidad mensual</h3>
+    <span class="meta">¿Conviene esperar? · Punto de equilibrio</span>
+  </div>
+  <div class="section-body">
+    <p class="muted text-sm mb-12">Para cada edad X entre 61 y 65, vs. retirarse hoy a la edad mínima (60), calculamos mes a mes: ingresos dejados de percibir si esperas + mejora futura cuando finalmente te retires + diferencia acumulada. El punto de equilibrio es el mes en que la decisión de "esperar" se vuelve más rentable.</p>
+
+    <div class="field-row mb-12">
+      <div class="field">
+        <label>Edad alternativa a evaluar</label>
+        <select class="select" id="i-edadAlt">
+          <option>61</option><option>62</option><option>63</option><option>64</option><option selected>65</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Horizonte (años desde edad mínima)</label>
+        <input class="input mono" id="i-horizonte" type="number" min="5" max="40" value="25">
+      </div>
+    </div>
+
+    <div class="kpi-grid mb-16" id="kpi-opo"></div>
+
+    <div class="chart-grid mb-16">
+      <div class="chart-wrap"><h5>Flujo acumulado: retirarse a 60 vs. esperar</h5><canvas id="ch-opo-cruce"></canvas></div>
+      <div class="chart-wrap"><h5>Pensión mensual a recibir según escenario</h5><canvas id="ch-opo-mensual"></canvas></div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table class="tbl" id="tbl-opo">
+        <thead><tr>
+          <th>Año</th>
+          <th class="num">Pensión si te retiras a 60 (anual)</th>
+          <th class="num">Pensión si esperas (anual)</th>
+          <th class="num">Diferencia acumulada</th>
+          <th>Estado</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECCIÓN 7 — M40 PROSPECTIVA
+     ========================================================= -->
+<section class="section" id="sec-m40-prosp">
+  <div class="section-head">
+    <h3><span class="step-num">7</span> Modalidad 40 prospectiva</h3>
+    <span class="meta">Cuotas escalonadas 2026–2030</span>
+  </div>
+  <div class="section-body">
+    <div class="field-group mb-16">
+      <div class="field-row-3">
+        <div class="field">
+          <label>Salario M40 mensual <span class="info" title="Sobre el que pagarás. Tope: 25 UMA mensuales = $89,167.55">i</span></label>
+          <div class="input-prefix-wrap"><span class="prefix">$</span><input class="input mono" id="i-salM40" type="number" min="0" step="100" value="89167"></div>
+          <span class="hint" id="hint-topeM40">Tope 25 UMA = $89,167.55</span>
+        </div>
+        <div class="field">
+          <label>Meses en M40 prospectiva</label>
+          <input class="input mono" id="i-mesesM40" type="number" min="1" max="120" value="60">
+          <span class="hint">≈ 5 años (recomendado 5 años por reemplazo 250 semanas)</span>
+        </div>
+        <div class="field">
+          <label>Año de inicio</label>
+          <input class="input mono" id="i-anioInicio" type="number" min="2026" max="2035" value="2026">
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-grid mb-16" id="kpi-m40-prosp"></div>
+
+    <div class="tbl-wrap mb-16">
+      <table class="tbl" id="tbl-m40-prosp">
+        <thead><tr><th>Año</th><th class="num">Meses</th><th class="num">% cuota</th><th class="num">Costo mensual</th><th class="num">Costo anual</th><th class="num">Acumulado</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-wrap"><h5>Costo anual M40 prospectiva</h5><canvas id="ch-m40p-anual"></canvas></div>
+      <div class="chart-wrap"><h5>Costo acumulado M40</h5><canvas id="ch-m40p-acum"></canvas></div>
+      <div class="chart-wrap"><h5>Pensión con vs. sin M40</h5><canvas id="ch-m40p-comp"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECCIÓN 8 — M40 RETROACTIVA
+     ========================================================= -->
+<section class="section" id="sec-m40-retro">
+  <div class="section-head">
+    <h3><span class="step-num">8</span> Modalidad 40 retroactiva</h3>
+    <span class="meta">Brechas sin cotizar + recargo 2.07%/mes · Art. 287 LSS</span>
+  </div>
+  <div class="section-body">
+    <p class="muted text-sm mb-12">El IMSS permite cubrir periodos pasados sin cotizar pagando el monto base más un recargo mensual acumulable del 2.07% (Art. 287 LSS). Selecciona qué brechas (de las detectadas en tu constancia o capturadas manualmente) deseas pagar.</p>
+
+    <div class="field-row mb-12">
+      <div class="field">
+        <label>Salario base para retroactivo (mensual)</label>
+        <div class="input-prefix-wrap"><span class="prefix">$</span><input class="input mono" id="i-salRetro" type="number" min="0" step="100" value="89167"></div>
+      </div>
+      <div class="field">
+        <label>% cuota retroactiva (Art. 218 ó cuota M40 vigente al periodo)</label>
+        <input class="input mono" id="i-pctRetro" type="number" min="0" step="0.001" value="13.347">
+      </div>
+    </div>
+
+    <div class="kpi-grid mb-16" id="kpi-m40-retro"></div>
+
+    <div class="tbl-wrap mb-16">
+      <table class="tbl" id="tbl-m40-retro-mes">
+        <thead><tr><th>Mes #</th><th>Periodo</th><th class="num">Cuota base</th><th class="num">Meses transcurridos</th><th class="num">Recargo (2.07%·n)</th><th class="num">Total mes</th><th class="num">Acumulado</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-wrap"><h5>Cuota base vs recargo acumulado</h5><canvas id="ch-retro-bars"></canvas></div>
+      <div class="chart-wrap"><h5>Inversión total retroactiva acumulada</h5><canvas id="ch-retro-acum"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECCIÓN 9 — FINANCIAMIENTO 3 BANCOS
+     ========================================================= -->
+<section class="section" id="sec-financia">
+  <div class="section-head">
+    <h3><span class="step-num">9</span> Financiamiento con 3 financieras</h3>
+    <span class="meta">Banorte · BBVA · Santander · Sistema francés</span>
+  </div>
+  <div class="section-body">
+    <p class="muted text-sm mb-12">Comparativa de tres bancos para financiar la inversión total en M40 (prospectiva + retroactiva). Tasas <span class="tag tag-editable">editables</span> reflejan condiciones típicas de crédito personal o nómina para jubilación; ajusta según la cotización que recibas.</p>
+
+    <div class="param-grid mb-16" id="fin-params"></div>
+    <div class="field-row mb-12">
+      <div class="field">
+        <label>Capital a financiar</label>
+        <div class="input-prefix-wrap"><span class="prefix">$</span><input class="input mono" id="i-capitalFin" type="number" min="0" step="1000" value="0"></div>
+        <span class="hint">Dejar en 0 para usar inversión total calculada (M40 prosp + retro).</span>
+      </div>
+      <div class="field">
+        <label>Plazo (meses)</label>
+        <input class="input mono" id="i-plazoFin" type="number" min="6" max="120" value="60">
+      </div>
+    </div>
+
+    <div class="tbl-wrap mb-16">
+      <table class="tbl" id="tbl-financia">
+        <thead><tr>
+          <th>Financiera</th>
+          <th class="num">Tasa anual</th>
+          <th class="num">Comisión</th>
+          <th class="num">CAT aprox.</th>
+          <th class="num">Mensualidad</th>
+          <th class="num">Total pagado</th>
+          <th class="num">Intereses</th>
+          <th class="num">Costo total con IMSS</th>
+          <th class="num">Flujo neto pensión</th>
+          <th class="num">Meses recuperar</th>
+          <th>Conveniencia</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-wrap"><h5>Mensualidad por banco</h5><canvas id="ch-fin-mensualidad"></canvas></div>
+      <div class="chart-wrap"><h5>Intereses pagados por banco</h5><canvas id="ch-fin-intereses"></canvas></div>
+    </div>
+
+    <details class="mt-16">
+      <summary class="btn btn-sm">Ver tabla de amortización completa (Banorte)</summary>
+      <div class="tbl-wrap mt-12" style="max-height:400px;overflow-y:auto;">
+        <table class="tbl" id="tbl-amort">
+          <thead><tr><th>Mes</th><th class="num">Pago</th><th class="num">Interés</th><th class="num">Capital</th><th class="num">Saldo</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECCIÓN 10 — LEY 73 vs LEY 97
+     ========================================================= -->
+<section class="section" id="sec-ley97">
+  <div class="section-head">
+    <h3><span class="step-num">10</span> Comparativa Ley 73 vs Ley 97</h3>
+    <span class="meta">Beneficio definido vs. Cuenta individual</span>
+  </div>
+  <div class="section-body">
+    <p class="muted text-sm mb-12">Estimación simplificada Ley 97 a partir del saldo AFORE: retiro programado (con esperanza de vida CONAPO) y renta vitalicia teórica. La PMG Ley 97 sirve como piso ($7,811.68).</p>
+    <div class="tbl-wrap mb-16">
+      <table class="tbl" id="tbl-ley97">
+        <thead><tr>
+          <th>Régimen / modalidad</th>
+          <th>Base del beneficio</th>
+          <th class="num">Pensión mensual</th>
+          <th>Certeza del flujo</th>
+          <th>Herencia / saldo</th>
+          <th>Sensibilidad rendimientos</th>
+          <th>Riesgo</th>
+          <th>Conveniencia</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-wrap"><h5>Comparativa de pensión mensual</h5><canvas id="ch-ley97"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECCIÓN 11 — RESUMEN MAESTRO
+     ========================================================= -->
+<section class="section" id="sec-resumen">
+  <div class="section-head">
+    <h3><span class="step-num">11</span> Resumen maestro · Comparativo final</h3>
+    <span class="meta">Todas las opciones lado a lado</span>
+  </div>
+  <div class="section-body">
+    <div class="tbl-wrap mb-16">
+      <table class="tbl" id="tbl-resumen">
+        <thead><tr>
+          <th>Opción</th>
+          <th class="num">Pensión mensual</th>
+          <th class="num">Pensión anual</th>
+          <th class="num">Semanas</th>
+          <th class="num">SBC prom.</th>
+          <th class="num">Inversión inicial</th>
+          <th class="num">Mensualidad adicional</th>
+          <th class="num">Costo financiero</th>
+          <th class="num">Costo oportunidad</th>
+          <th class="num">Meses recuperar</th>
+          <th class="num">Flujo neto 10a</th>
+          <th class="num">Flujo neto 20a</th>
+          <th class="num">Flujo neto 25a</th>
+          <th>Riesgo</th>
+          <th>Complejidad</th>
+          <th>Liquidez</th>
+          <th>Recom.</th>
+          <th class="num">Score</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-wrap"><h5>Pensión mensual por opción</h5><canvas id="ch-resumen-pension"></canvas></div>
+      <div class="chart-wrap"><h5>Flujo neto acumulado a 20 años</h5><canvas id="ch-resumen-flujo"></canvas></div>
+      <div class="chart-wrap"><h5>Radar comparativo (top 4 opciones)</h5><canvas id="ch-resumen-radar"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECCIÓN 12 — RECOMENDACIÓN
+     ========================================================= -->
+<section class="section" id="sec-reco">
+  <div class="section-head">
+    <h3><span class="step-num">12</span> Recomendación priorizada</h3>
+    <span class="meta">Motor de decisión</span>
+  </div>
+  <div class="section-body">
+    <div id="reco-output"></div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECCIÓN 13 — SUPUESTOS Y PARÁMETROS
+     ========================================================= -->
+<details class="section" id="sec-supuestos">
+  <summary>
+    <h3><span class="step-num">13</span> Supuestos y parámetros editables</h3>
+    <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </summary>
+  <div class="section-body">
+    <p class="muted text-sm mb-16">Todas las constantes del modelo son auditables y editables. Las etiquetas indican origen: <span class="tag tag-oficial">oficial</span> proviene de norma o publicación; <span class="tag tag-editable">editable</span> es parámetro modificable; <span class="tag tag-estimado">estimado</span> es supuesto del modelo.</p>
+    <div class="param-grid" id="param-grid"></div>
+    <div class="mt-16 spaced">
+      <button class="btn btn-primary btn-sm" id="btn-aplicar-supuestos">Aplicar y recalcular</button>
+      <button class="btn btn-sm" id="btn-reset-supuestos">Restaurar valores oficiales</button>
+    </div>
+  </div>
+</details>
+
+<!-- =========================================================
+     SECCIÓN 14 — FÓRMULAS
+     ========================================================= -->
+<details class="section" id="sec-formulas">
+  <summary>
+    <h3><span class="step-num">14</span> Cómo se calcula · Fórmulas y normativa</h3>
+    <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </summary>
+  <div class="section-body" id="formulas-body"></div>
+</details>
+
+<!-- =========================================================
+     SECCIÓN 15 — EXPORTAR
+     ========================================================= -->
+<section class="section" id="sec-export">
+  <div class="section-head">
+    <h3><span class="step-num">15</span> Exportar resultados</h3>
+    <span class="meta">PDF · CSV · JSON</span>
+  </div>
+  <div class="section-body">
+    <p class="muted text-sm mb-12">Genera entregables imprimibles o de respaldo para tu expediente personal o asesor.</p>
+    <div class="spaced">
+      <button class="btn btn-primary" id="btn-export-pdf">📄 Exportar resumen a PDF</button>
+      <button class="btn btn-accent" id="btn-export-json">⬇ Descargar JSON</button>
+      <button class="btn" id="btn-export-csv">📊 Tablas a CSV</button>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     FOOTER / DISCLAIMER
+     ========================================================= -->
+<footer class="footer">
+  <p><strong>Aviso legal.</strong> Esta calculadora es una herramienta educativa y de planeación financiera para Eduardo Carrillo Reyna. Los resultados son referenciales y NO constituyen asesoría legal, fiscal ni financiera. La pensión definitiva la determina el IMSS con base en el expediente y resoluciones administrativas vigentes a la fecha del trámite. Para una resolución oficial acude a tu Subdelegación IMSS o a un perito en seguridad social.</p>
+  <p class="mt-8"><strong>Fuentes normativas:</strong> Ley del Seguro Social 1973 (Arts. 138, 145, 164–171), Art. 218 LSS Ley 97, Art. 287 LSS (recargos), Decreto Fox 1/jul/2004, Decreto UMA 27/ene/2016, Jurisprudencias 2a./J. 85/2010 y 2a./J. 26/2017 (factor Fox / UMA). UMA INEGI feb-2026, PMG SHCP 2026, esperanza de vida CONAPO 2024–2026.</p>
+  <p class="mt-8"><strong>Versión modelo:</strong> <span id="footer-version">Mayo 2026</span> · Sin garantía actuarial individual · Cálculos en MXN nominal.</p>
+</footer>
+
+</main>
+</div>
+</div>
+
+<button class="fab" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Subir">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+</button>
+
+
+<script>
+/* =================================================================
+   1. CONFIGURACIÓN Y CONSTANTES
+   ================================================================= */
+
+// PDF.js worker
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+const P = {
+  // UMA y montos oficiales 2026
+  UMA_DIARIA: 117.31,            // INEGI feb-2026
+  DIAS_MES: 30.4,
+  TOPE_UMA_M40: 25,
+  PMG_LEY73: 10636.54,
+  PMG_LEY97: 7811.68,
+  FACTOR_FOX: 1.11,
+  // Cuotas M40 escalonadas (Reforma 2022, vigente desde 2023)
+  CUOTAS_M40: { 2023: 11.166, 2024: 12.257, 2025: 13.347, 2026: 14.438, 2027: 15.529, 2028: 16.620, 2029: 17.711, 2030: 18.800 },
+  CUOTA_M40_TOPE: 18.800,
+  // Factor edad CEAV (Art. 171 LSS 73)
+  FACTOR_EDAD: { 60: 0.75, 61: 0.80, 62: 0.85, 63: 0.90, 64: 0.95, 65: 1.00 },
+  // Asignaciones familiares
+  PCT_ESPOSA: 0.15,
+  PCT_HIJO: 0.10,
+  PCT_AYUDA_ASIST: 0.15,
+  MAX_HIJOS: 4,
+  // Recargo M40 retroactiva (Art. 287 LSS)
+  RECARGO_MENSUAL: 0.0207,
+  // Esperanza de vida CONAPO 2024-2026
+  ESPERANZA: { H60: 22.5, M60: 26.3, H65: 18.7, M65: 21.9 },
+  // Financieras (configurables)
+  FINANCIERAS: [
+    { id: "BANORTE",    nombre: "Banorte",    tasaAnual: 40.0, comAperturaPct: 3.0, color: "#EB0028" },
+    { id: "BBVA",       nombre: "BBVA",       tasaAnual: 38.0, comAperturaPct: 2.5, color: "#004481" },
+    { id: "SANTANDER",  nombre: "Santander",  tasaAnual: 42.0, comAperturaPct: 3.5, color: "#EC0000" },
+  ],
+  PLAZO_FIN_MESES: 60,
+  // Económicas
+  TASA_DESCUENTO_VPN: 0.05,
+  CRECIM_UMA_ANUAL: 0.045,
+  TASA_AFORE_REAL: 0.04, // rendimiento real estimado AFORE
+  ANIO_MODELO: 2026,
+  FECHA_MODELO: "Mayo 2026",
+};
+
+// Derivados
+function uma_mensual() { return P.UMA_DIARIA * P.DIAS_MES; }
+function tope_m40_mensual() { return P.UMA_DIARIA * P.TOPE_UMA_M40 * P.DIAS_MES; }
+
+function cuotaM40Anio(anio) {
+  if (anio <= 2022) return 10.075;
+  if (anio >= 2030) return P.CUOTA_M40_TOPE;
+  return P.CUOTAS_M40[anio] ?? P.CUOTA_M40_TOPE;
+}
+
+// Tabla Artículo 167 LSS 1973 — [limInf, limSup, cuantíaBásica %, incrementoAnual %]
+const TABLA_ART_167 = [
+  [0.00, 1.00, 80.00, 0.563],
+  [1.01, 1.25, 77.11, 0.814],
+  [1.26, 1.50, 58.18, 1.178],
+  [1.51, 1.75, 49.23, 1.430],
+  [1.76, 2.00, 42.67, 1.615],
+  [2.01, 2.25, 37.65, 1.756],
+  [2.26, 2.50, 33.68, 1.868],
+  [2.51, 2.75, 30.48, 1.958],
+  [2.76, 3.00, 27.83, 2.033],
+  [3.01, 3.25, 25.60, 2.096],
+  [3.26, 3.50, 23.70, 2.149],
+  [3.51, 3.75, 22.07, 2.195],
+  [3.76, 4.00, 20.65, 2.235],
+  [4.01, 4.25, 19.39, 2.271],
+  [4.26, 4.50, 18.29, 2.301],
+  [4.51, 4.75, 17.30, 2.330],
+  [4.76, 5.00, 16.41, 2.355],
+  [5.01, 5.25, 15.61, 2.377],
+  [5.26, 5.50, 14.88, 2.398],
+  [5.51, 5.75, 14.22, 2.416],
+  [5.76, 6.00, 13.62, 2.433],
+  [6.01, 9999, 13.00, 2.450]
+];
+
+/* =================================================================
+   2. UTILIDADES
+   ================================================================= */
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+function fmt(n, dec=2) {
+  if (n === null || n === undefined || !isFinite(n)) return "—";
+  return Number(n).toLocaleString("es-MX", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+function fmtMoney(n, dec=2) {
+  if (n === null || n === undefined || !isFinite(n)) return "—";
+  return "$" + fmt(n, dec);
+}
+function fmtMoney0(n) { return fmtMoney(n, 0); }
+function fmtPct(n, dec=2) {
+  if (!isFinite(n)) return "—";
+  return fmt(n, dec) + "%";
+}
+function fmtInt(n) {
+  if (!isFinite(n)) return "—";
+  return Math.round(n).toLocaleString("es-MX");
+}
+function fmtMeses(n) {
+  if (!isFinite(n) || n <= 0) return "—";
+  if (n > 1200) return ">100 años";
+  return `${Math.round(n)} m (${(n/12).toFixed(1)} a)`;
+}
+function clampNum(v, min, max) { return Math.min(max, Math.max(min, v)); }
+
+function parseDateMX(s) {
+  if (!s) return null;
+  // Acepta YYYY-MM-DD o DD/MM/YYYY o DD-MM-YYYY
+  let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  m = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/.exec(s);
+  if (m) {
+    let y = +m[3]; if (y < 100) y += y < 50 ? 2000 : 1900;
+    return new Date(y, +m[2]-1, +m[1]);
+  }
+  return null;
+}
+
+function fechaToISO(d) {
+  if (!d) return "";
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,"0"), dd = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${dd}`;
+}
+
+function mesesEntreFechas(d1, d2) {
+  if (!d1 || !d2) return 0;
+  const ms = d2 - d1;
+  if (ms <= 0) return 0;
+  return ms / (1000 * 60 * 60 * 24 * 30.4375);
+}
+
+function edadEnFecha(fechaNac, refDate) {
+  if (!fechaNac) return null;
+  const ref = refDate || new Date();
+  let edad = ref.getFullYear() - fechaNac.getFullYear();
+  const m = ref.getMonth() - fechaNac.getMonth();
+  if (m < 0 || (m === 0 && ref.getDate() < fechaNac.getDate())) edad--;
+  return edad;
+}
+
+/* =================================================================
+   3. PARSER DE CONSTANCIA (PDF + OCR + texto)
+   ================================================================= */
+
+const PARSER_REGEX = {
+  NSS:        /\b(?:NSS|N\.?S\.?S\.?|N[uú]mero\s+de\s+Seguridad\s+Social)\s*[:#]?\s*([0-9]{11})\b/i,
+  NSS_LOOSE:  /\b([0-9]{11})\b/,
+  CURP:       /\b([A-Z]{4}[0-9]{6}[HM][A-Z]{5}[A-Z0-9]{2})\b/,
+  NOMBRE:     /(?:Nombre|Trabajador|del?\s+Asegurado)\s*[:]?\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ.\s]{8,80})/,
+  FECHA_NAC:  /(?:fecha\s+de\s+nacimiento|nacimiento)\s*[:]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}\-\d{2}\-\d{2})/i,
+  PRIMERA_ALTA: /(?:primera\s+alta|fecha\s+de\s+primera\s+alta|inicio\s+de\s+cotizaci[oó]n)\s*[:]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}\-\d{2}\-\d{2})/i,
+  SEMANAS:    /(?:total\s+de\s+)?semanas\s+(?:cotizadas|reconocidas)\s*[:]?\s*([0-9]{2,5})/i,
+  SBC:        /(?:[uú]ltimo\s+SBC|salario\s+base\s+de\s+cotizaci[oó]n|SBC)\s*[:]?\s*\$?\s*([0-9]{2,6}(?:\.[0-9]{1,2})?)/i,
+};
+
+const PARSER_HISTORIAL_LINE = /^\s*(\d{3,7})?\s*([A-Z0-9ÁÉÍÓÚÑ\s.,&\-]{6,80})\s+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\s+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|VIGENTE|ACTIVO|--)\s+\$?\s*([0-9]+(?:\.\d+)?)\s*(?:\s+(\d{1,4}))?$/i;
+
+let parseState = {
+  rawText: "",
+  detectados: {},
+  historial: [],
+  brechas: [],
+  fileType: null,
+};
+
+async function readPdfText(file) {
+  // Extrae texto del PDF preservando UN ITEM POR LÍNEA.
+  // Las constancias IMSS reales tienen etiquetas y valores en items separados
+  // del flujo PDF (no agrupados por fila visual). Emitir cada item como
+  // una línea recupera la misma estructura que pymupdf get_text() y permite
+  // que el parser por anclas funcione ("NSS:" en una línea, valor en la siguiente).
+  const arr = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arr }).promise;
+  let txt = "";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const tc = await page.getTextContent();
+    // Cada item en una línea. Filtra items vacíos o solo espacios.
+    const lineas = tc.items
+      .map(it => (it.str || "").replace(/\s+/g, " ").trim())
+      .filter(s => s.length > 0);
+    txt += lineas.join("\n") + "\n";
+  }
+  return txt.trim();
+}
+
+async function pdfPageToImage(file, pageNum=1) {
+  const arr = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arr }).promise;
+  const page = await pdf.getPage(pageNum);
+  const vp = page.getViewport({ scale: 2 });
+  const canvas = document.createElement("canvas");
+  canvas.width = vp.width; canvas.height = vp.height;
+  const ctx = canvas.getContext("2d");
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  return canvas.toDataURL("image/png");
+}
+
+async function ocrImage(input) {
+  // input: File u dataURL
+  const { data } = await Tesseract.recognize(input, "spa+eng", {
+    logger: m => { if (m.status === "recognizing text") setProgress("extract", Math.round(m.progress*100)); }
+  });
+  return data.text;
+}
+
+function setProgressStep(step) {
+  const steps = ["read","extract","detect","validate"];
+  const idx = steps.indexOf(step);
+  $$("#parse-progress .progress-step").forEach((el, i) => {
+    el.classList.remove("active","done");
+    if (i < idx) el.classList.add("done");
+    if (i === idx) el.classList.add("active");
+  });
+}
+
+function setProgress(step, pct, msg="") {
+  $("#parse-progress").classList.remove("hidden");
+  setProgressStep(step);
+  if (pct !== undefined) $("#parse-progress .progress > div").style.width = pct + "%";
+  if (msg) $("#parse-msg").textContent = msg;
+}
+
+// Auxiliares para parser por líneas
+function _normalizaFechaLaxa(s) {
+  // Acepta "06   /   05   /   2026", "06/05/2026", "06-05-2026"
+  if (!s) return null;
+  const m = s.replace(/\s+/g,"").match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (!m) return null;
+  return parseDateMX(`${m[1]}/${m[2]}/${m[3]}`);
+}
+function _fechaNacDesdeCURP(curp) {
+  if (!curp || curp.length < 10) return null;
+  const yy = +curp.substr(4,2);
+  const mm = +curp.substr(6,2);
+  const dd = +curp.substr(8,2);
+  // CURP: la 17a posición (índice 16) es dígito; antes de ~2000 es letra. Heurística: si yy>30 → 19xx, si no 20xx
+  const yyyy = yy > 30 ? 1900 + yy : 2000 + yy;
+  const d = new Date(yyyy, mm-1, dd);
+  if (isNaN(d.getTime())) return null;
+  return d;
+}
+
+function parseText(raw) {
+  const detectados = {};
+  // Normalizar y partir en líneas
+  const lines = raw.split(/\r?\n/).map(l => l.replace(/\s+/g," ").trim()).filter(l => l.length > 0);
+
+  // CURP: en cualquier parte del texto
+  let mCurp = raw.match(/\b([A-Z]{4}[0-9]{6}[HM][A-Z]{5}[A-Z0-9]{2})\b/);
+  if (mCurp) detectados.curp = { valor: mCurp[1], conf: "alto" };
+
+  // Estrategia 1: usar la etiqueta "NSS:" como ancla (formato real IMSS).
+  // Estructura: ["NSS:", <Nombre>, <NSS 11 dígitos>, <CURP>, "CURP:"]
+  const idxNSS = lines.findIndex(l => /^NSS\s*:?$/i.test(l));
+  if (idxNSS >= 0) {
+    const nombreCand = lines[idxNSS + 1] || "";
+    const nssCand    = lines[idxNSS + 2] || "";
+    const curpCand   = lines[idxNSS + 3] || "";
+    if (/^[A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜáéíóúñü.\s]{4,80}$/i.test(nombreCand)) {
+      detectados.nombre = { valor: nombreCand.replace(/\s+/g," ").trim(), conf: "alto" };
+    }
+    const mNss = nssCand.match(/^([0-9]{11})$/);
+    if (mNss) detectados.nss = { valor: mNss[1], conf: "alto" };
+    if (!detectados.curp) {
+      const mC = curpCand.match(/^([A-Z]{4}[0-9]{6}[HM][A-Z]{5}[A-Z0-9]{2})$/);
+      if (mC) detectados.curp = { valor: mC[1], conf: "alto" };
+    }
+  }
+  // Fallback NSS suelto
+  if (!detectados.nss) {
+    const mLoose = raw.match(/\b([0-9]{11})\b/);
+    if (mLoose) detectados.nss = { valor: mLoose[1], conf: "medio" };
+  }
+
+  // Fecha de nacimiento desde CURP
+  if (detectados.curp) {
+    const d = _fechaNacDesdeCURP(detectados.curp.valor);
+    if (d) detectados.fechaNac = { valor: fechaToISO(d), conf: "alto" };
+  }
+  // Fallback: etiqueta explícita (otros formatos)
+  if (!detectados.fechaNac) {
+    const m = raw.match(/(?:fecha\s+de\s+nacimiento|nacimiento)\s*[:]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}\-\d{2}\-\d{2})/i);
+    if (m) {
+      const d = parseDateMX(m[1]);
+      if (d) detectados.fechaNac = { valor: fechaToISO(d), conf: "medio" };
+    }
+  }
+
+  // Semanas: 4 candidatos según estructura real IMSS.
+  // Buscamos las etiquetas y el bloque numérico contiguo.
+  // Variante real: el bloque numérico viene ANTES de la etiqueta "Semanas cotizadas IMSS".
+  // En la constancia real: los 3 números aparecen ANTES de la etiqueta
+  // "Semanas cotizadas IMSS" siguiendo el orden de las columnas X del PDF:
+  //   (-3) = columna X izquierda  → IMSS
+  //   (-2) = columna X central    → Descontadas
+  //   (-1) = columna X derecha    → Reintegradas
+  const idxSemIMSS = lines.findIndex(l => /^Semanas\s+cotizadas\s+IMSS\b/i.test(l));
+  if (idxSemIMSS >= 0) {
+    const a = lines[idxSemIMSS - 3];
+    const b = lines[idxSemIMSS - 2];
+    const c = lines[idxSemIMSS - 1];
+    if (/^[0-9]{1,5}$/.test(a) && /^[0-9]{1,5}$/.test(b) && /^[0-9]{1,5}$/.test(c)) {
+      detectados.semanasIMSS         = { valor: +a, conf: "alto" };
+      detectados.semanasDescontadas  = { valor: +b, conf: "alto" };
+      detectados.semanasReintegradas = { valor: +c, conf: "alto" };
+    }
+  }
+  // Total de semanas cotizadas: número aislado cerca de "NSS:" o antes de la etiqueta "Total de semanas cotizadas"
+  const idxTotal = lines.findIndex(l => /^Total\s+de\s+semanas\s+cotizadas$/i.test(l));
+  if (idxTotal >= 0 && idxNSS >= 0) {
+    // Heurística: la línea contigua a "NSS:" (índice idxNSS-1) suele ser el total
+    const totalCand = lines[idxNSS - 1];
+    if (/^[0-9]{1,5}$/.test(totalCand || "")) {
+      detectados.semanas = { valor: +totalCand, conf: "alto" };
+    }
+  }
+  // Fallback: regex sobre todo el texto
+  if (!detectados.semanas) {
+    const m = raw.match(/(?:total\s+de\s+)?semanas\s+(?:cotizadas|reconocidas)\s*[:]?\s*([0-9]{2,5})/i);
+    if (m) detectados.semanas = { valor: +m[1], conf: "medio" };
+  }
+  // Si no hay total pero sí semanasIMSS y descontadas: total = IMSS - descontadas + reintegradas
+  if (!detectados.semanas && detectados.semanasIMSS) {
+    const reint = detectados.semanasReintegradas?.valor || 0;
+    const desc  = detectados.semanasDescontadas?.valor  || 0;
+    detectados.semanas = { valor: detectados.semanasIMSS.valor - desc + reint, conf: "medio" };
+  }
+
+  // Fecha de emisión del reporte (informativa, no es obligatoria pero útil).
+  // pdf.js puede emitir la fecha como items separados ["06","/","05","/","2026"],
+  // por eso concatenamos las siguientes líneas hasta formar una fecha válida.
+  const idxEmision = lines.findIndex(l => /^Fecha\s+de\s+emisi[oó]n\s+del\s+reporte$/i.test(l));
+  if (idxEmision >= 0) {
+    const candidato = lines.slice(idxEmision + 1, idxEmision + 8).join("");
+    const f = _normalizaFechaLaxa(candidato);
+    if (f) detectados.fechaEmision = { valor: fechaToISO(f), conf: "alto" };
+  }
+
+  // ============================================================
+  // Historial laboral: bloques multi-línea con ancla "Nombre del patrón"
+  // Estructura (relativa al índice del label):
+  //   idx-8: Fecha baja (DD/MM/YYYY o VIGENTE)
+  //   idx-7: Entidad federativa (valor)
+  //   idx-6: "Salario Base de Cotización *"
+  //   idx-5: "Fecha de alta"
+  //   idx-4: "Fecha de baja"
+  //   idx-3: Fecha de alta (DD/MM/YYYY)
+  //   idx-2: "Entidad federativa"
+  //   idx-1: SBC ("$ 706.28")
+  //   idx   : "Nombre del patrón"
+  //   idx+1 : <Nombre del patrón>
+  //   idx+2 : "Registro Patronal"
+  //   idx+3 : <Registro patronal>
+  // ============================================================
+  const historial = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^Nombre\s+del\s+patr[oó]n$/i.test(lines[i])) continue;
+    const bajaRaw  = lines[i - 8];
+    const altaRaw  = lines[i - 3];
+    const sbcRaw   = lines[i - 1];
+    const entidad  = lines[i - 7];
+    const patron   = lines[i + 1];
+    const regPat   = lines[i + 3];
+    const alta = _normalizaFechaLaxa(altaRaw);
+    const esVigente = bajaRaw && /^(VIGENTE|ACTIVO|--|N\/?A)$/i.test(bajaRaw.trim());
+    const baja = esVigente ? null : _normalizaFechaLaxa(bajaRaw);
+    const sbcMatch = (sbcRaw || "").match(/\$?\s*([0-9]+(?:\.[0-9]+)?)/);
+    const sbc = sbcMatch ? +sbcMatch[1] : null;
+    if (alta && sbc && sbc > 5) {
+      historial.push({
+        patron: (patron || "Patrón sin identificar").trim().slice(0, 80),
+        registroPatronal: (regPat || "").trim().slice(0, 20),
+        entidad: (entidad || "").trim().slice(0, 40),
+        alta, baja, sbc, semanas: null
+      });
+    }
+  }
+
+  // SBC: usar el más reciente del historial (última baja o vigente)
+  if (historial.length > 0) {
+    const ordenadoPorAlta = [...historial].sort((a,b) => b.alta - a.alta);
+    const ultimo = ordenadoPorAlta[0];
+    if (ultimo.sbc) detectados.sbcDiario = { valor: ultimo.sbc, conf: "alto" };
+  } else {
+    // Fallback regex
+    const m = raw.match(/(?:[uú]ltimo\s+SBC|salario\s+base\s+de\s+cotizaci[oó]n|SBC)\s*[:]?\s*\$?\s*([0-9]{2,6}(?:\.[0-9]{1,2})?)/i);
+    if (m) detectados.sbcDiario = { valor: +m[1], conf: "medio" };
+  }
+
+  // Primera alta: la más antigua del historial
+  if (historial.length > 0) {
+    const minAlta = historial.reduce((a,b) => a.alta < b.alta ? a : b);
+    detectados.primeraAlta = { valor: fechaToISO(minAlta.alta), conf: "alto" };
+  } else {
+    const m = raw.match(/(?:primera\s+alta|fecha\s+de\s+primera\s+alta|inicio\s+de\s+cotizaci[oó]n)\s*[:]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+    if (m) {
+      const d = parseDateMX(m[1]);
+      if (d) detectados.primeraAlta = { valor: fechaToISO(d), conf: "medio" };
+    }
+  }
+
+  // Brechas
+  historial.sort((a,b) => a.alta - b.alta);
+  const brechas = [];
+  for (let i = 0; i < historial.length - 1; i++) {
+    const fin = historial[i].baja;
+    const inicio = historial[i + 1].alta;
+    if (fin && inicio && inicio > fin) {
+      const meses = mesesEntreFechas(fin, inicio);
+      if (meses >= 1) {
+        brechas.push({ desde: fin, hasta: inicio, meses: Math.round(meses), elegible: meses >= 1 });
+      }
+    }
+  }
+  return { detectados, historial, brechas };
+}
+
+function renderDetectados() {
+  const tb = $("#tbl-detectados tbody"); tb.innerHTML = "";
+  const d = parseState.detectados;
+  const filas = [
+    ["nombre","Nombre"], ["nss","NSS"], ["curp","CURP"],
+    ["fechaNac","Fecha de nacimiento"], ["primeraAlta","Primera alta IMSS"],
+    ["semanas","Semanas cotizadas (Total)"],
+    ["semanasIMSS","Semanas cotizadas IMSS"],
+    ["semanasDescontadas","Semanas descontadas"],
+    ["semanasReintegradas","Semanas reintegradas"],
+    ["sbcDiario","Último SBC diario"],
+    ["fechaEmision","Fecha de emisión del reporte"]
+  ];
+  for (const [k, label] of filas) {
+    const v = d[k];
+    if (!v) {
+      tb.insertAdjacentHTML("beforeend",
+        `<tr><td>${label}</td><td><input class="input small" data-detec-key="${k}" value=""></td><td class="conf-low">—</td><td><button class="btn btn-sm" data-clear="${k}">Limpiar</button></td></tr>`);
+    } else {
+      const cls = v.conf === "alto" ? "conf-high" : v.conf === "medio" ? "conf-med" : "conf-low";
+      tb.insertAdjacentHTML("beforeend",
+        `<tr><td>${label}</td><td><input class="input small" data-detec-key="${k}" value="${v.valor}"></td><td class="${cls}">${v.conf.toUpperCase()}</td><td><button class="btn btn-sm" data-clear="${k}">Limpiar</button></td></tr>`);
+    }
+  }
+  tb.addEventListener("input", (e) => {
+    const k = e.target.dataset.detecKey;
+    if (k) parseState.detectados[k] = { valor: e.target.value, conf: "manual" };
+  }, { once: true });
+}
+
+function renderHistorial() {
+  const tb = $("#tbl-historial tbody"); tb.innerHTML = "";
+  if (!parseState.historial.length) {
+    tb.innerHTML = `<tr><td colspan="6" class="center muted">No se detectó historial laboral. Puedes capturarlo manualmente en la sección Datos.</td></tr>`;
+    return;
+  }
+  parseState.historial.forEach((h, i) => {
+    tb.insertAdjacentHTML("beforeend", `<tr>
+      <td>${i+1}</td>
+      <td>${h.patron}</td>
+      <td>${h.alta ? fechaToISO(h.alta) : "—"}</td>
+      <td>${h.baja ? fechaToISO(h.baja) : "<span class='tag tag-success'>Vigente</span>"}</td>
+      <td class="num">$${fmt(h.sbc,2)}</td>
+      <td class="num">${h.semanas ?? "—"}</td>
+    </tr>`);
+  });
+}
+
+function renderBrechas() {
+  const tb = $("#tbl-brechas tbody"); tb.innerHTML = "";
+  if (!parseState.brechas.length) {
+    tb.innerHTML = `<tr><td colspan="6" class="center muted">No se detectaron brechas en el historial.</td></tr>`;
+    return;
+  }
+  parseState.brechas.forEach((b, i) => {
+    tb.insertAdjacentHTML("beforeend", `<tr>
+      <td>${i+1}</td>
+      <td>${fechaToISO(b.desde)}</td>
+      <td>${fechaToISO(b.hasta)}</td>
+      <td class="num">${b.meses}</td>
+      <td>${b.elegible ? '<span class="tag tag-success">Elegible</span>' : '<span class="tag">No</span>'}</td>
+      <td><input type="checkbox" data-brecha-idx="${i}" ${b.elegible?'checked':''}></td>
+    </tr>`);
+  });
+}
+
+async function procesarPDF(file) {
+  setProgress("read", 5, "Leyendo PDF...");
+  let texto = "";
+  try {
+    texto = await readPdfText(file);
+  } catch (e) { texto = ""; }
+  if (texto.length < 200) {
+    // PDF sin texto (escaneado): convertir a imagen y OCR
+    setProgress("extract", 20, "PDF sin texto: aplicando OCR (puede tardar 30-60s)...");
+    try {
+      const img = await pdfPageToImage(file, 1);
+      texto = await ocrImage(img);
+    } catch (e) {
+      setProgress("validate", 100, "Error al procesar OCR: " + e.message);
+      return;
+    }
+  } else {
+    setProgress("extract", 60, "Texto extraído (" + texto.length + " caracteres)");
+  }
+  parseState.rawText = texto;
+  setProgress("detect", 80, "Detectando campos con regex en español...");
+  const res = parseText(texto);
+  parseState.detectados = res.detectados;
+  parseState.historial = res.historial;
+  parseState.brechas = res.brechas;
+  setProgress("validate", 100, "Validación finalizada");
+  mostrarRevision();
+}
+
+async function procesarImagen(file) {
+  setProgress("read", 5, "Cargando imagen...");
+  setProgress("extract", 10, "OCR Tesseract (puede tardar 30-60s)...");
+  let texto = "";
+  try { texto = await ocrImage(file); }
+  catch (e) { setProgress("validate", 100, "Error OCR: " + e.message); return; }
+  parseState.rawText = texto;
+  setProgress("detect", 80, "Detectando campos...");
+  const res = parseText(texto);
+  parseState.detectados = res.detectados;
+  parseState.historial = res.historial;
+  parseState.brechas = res.brechas;
+  setProgress("validate", 100, "Validación finalizada");
+  mostrarRevision();
+}
+
+function procesarTexto(texto) {
+  setProgress("read", 30, "Procesando texto pegado...");
+  parseState.rawText = texto;
+  setProgress("detect", 70, "Detectando campos...");
+  const res = parseText(texto);
+  parseState.detectados = res.detectados;
+  parseState.historial = res.historial;
+  parseState.brechas = res.brechas;
+  setProgress("validate", 100, "Validación finalizada");
+  mostrarRevision();
+}
+
+function mostrarRevision() {
+  $("#parse-result").classList.remove("hidden");
+  const nDet = Object.keys(parseState.detectados).length;
+  $("#parse-summary").textContent = ` Detectados ${nDet} campos · ${parseState.historial.length} registros de historial · ${parseState.brechas.length} brechas`;
+  renderDetectados();
+  renderHistorial();
+  renderBrechas();
+}
+
+function aplicarDetectados() {
+  const d = parseState.detectados;
+  // Releemos valores actuales de inputs (por si usuario editó)
+  $$("[data-detec-key]").forEach(inp => {
+    const k = inp.dataset.detecKey;
+    if (inp.value) d[k] = { valor: inp.value, conf: d[k]?.conf || "manual" };
+  });
+  if (d.nombre)       $("#i-nombre").value = d.nombre.valor;
+  if (d.nss)          $("#i-nss").value = d.nss.valor;
+  if (d.curp)         $("#i-curp").value = d.curp.valor;
+  if (d.fechaNac) {
+    $("#i-fechaNac").value = d.fechaNac.valor;
+    const dn = parseDateMX(d.fechaNac.valor);
+    if (dn) $("#i-edadActual").value = edadEnFecha(dn);
+  }
+  if (d.primeraAlta)  $("#i-primeraAlta").value = d.primeraAlta.valor;
+  if (d.semanas)      $("#i-semanas").value = d.semanas.valor;
+  if (d.sbcDiario)    $("#i-sbcDiario").value = d.sbcDiario.valor;
+  // Brechas seleccionadas → guardar en estado para M40 retro
+  appState.brechasSeleccionadas = parseState.brechas.filter((_, i) => {
+    const cb = $(`[data-brecha-idx="${i}"]`);
+    return cb && cb.checked;
+  });
+  recalcular();
+  document.getElementById("sec-datos").scrollIntoView({ behavior:"smooth" });
+}
+
+
+/* =================================================================
+   4. VALIDACIÓN DE DATOS
+   ================================================================= */
+function validarEntradas(i) {
+  const errores = [], warnings = [];
+  if (!i.semanas || i.semanas < 500) errores.push("Para Ley 73 se requieren al menos 500 semanas cotizadas (Art. 145 LSS).");
+  if (i.edadRetiro < 60 || i.edadRetiro > 65) errores.push("Edad de retiro debe estar entre 60 y 65.");
+  if (i.edadActual < 18 || i.edadActual > 90) errores.push("Edad actual fuera de rango razonable.");
+  if (i.sbcDiario <= 0) errores.push("El SBC diario debe ser mayor a cero.");
+  if (i.sbcDiario > P.UMA_DIARIA * P.TOPE_UMA_M40 + 1)
+    warnings.push(`SBC diario ($${fmt(i.sbcDiario)}) excede el tope de 25 UMA ($${fmt(P.UMA_DIARIA*P.TOPE_UMA_M40)}). Se ajustará al tope para cálculo.`);
+  if (i.salM40 > tope_m40_mensual() + 1)
+    warnings.push(`Salario M40 ($${fmt(i.salM40)}) excede el tope mensual de 25 UMA ($${fmt(tope_m40_mensual())}). Se ajustará al tope.`);
+  return { errores, warnings };
+}
+
+/* =================================================================
+   5. MOTOR ACTUARIAL LEY 73 (Art. 167)
+   ================================================================= */
+
+function obtenerGrupoArt167(salarioMensual) {
+  const um = uma_mensual();
+  const vecesUMA = salarioMensual / um;
+  for (const f of TABLA_ART_167) {
+    if (vecesUMA >= f[0] && vecesUMA <= f[1])
+      return { vecesUMA, limInf:f[0], limSup:f[1], cuantiaBasica:f[2], incrementoAnual:f[3] };
+  }
+  const u = TABLA_ART_167[TABLA_ART_167.length-1];
+  return { vecesUMA, limInf:u[0], limSup:u[1], cuantiaBasica:u[2], incrementoAnual:u[3] };
+}
+
+function calcularPensionLey73(p) {
+  const sbcMensual = Math.min(p.salarioMensual, tope_m40_mensual());
+  const grupo = obtenerGrupoArt167(sbcMensual);
+  const semExc = Math.max(0, p.semanas - 500);
+  const aniosExc = semExc / 52;
+  const cuantiaBasica = sbcMensual * (grupo.cuantiaBasica / 100);
+  const incrementos = sbcMensual * (grupo.incrementoAnual / 100) * aniosExc;
+  const pensionAnualBase = cuantiaBasica + incrementos;
+  const fEdad = P.FACTOR_EDAD[clampNum(Math.floor(p.edadRetiro), 60, 65)];
+  const pensionConEdad = pensionAnualBase * fEdad;
+  // Asignaciones
+  let pctAs = 0; const tieneEsposa = p.estadoCivil === "casado";
+  const hijos = clampNum(p.numHijos, 0, P.MAX_HIJOS);
+  if (tieneEsposa) pctAs += P.PCT_ESPOSA;
+  pctAs += hijos * P.PCT_HIJO;
+  let aplicaAyuda = false;
+  if (p.ayudaAsist && !tieneEsposa && hijos === 0) { pctAs += P.PCT_AYUDA_ASIST; aplicaAyuda = true; }
+  const asignaciones = pensionConEdad * pctAs;
+  const pensionConAsign = pensionConEdad + asignaciones;
+  const pensionConFox = p.aplicarFox ? pensionConAsign * P.FACTOR_FOX : pensionConAsign;
+  const pensionFinal = Math.max(pensionConFox, P.PMG_LEY73);
+  const aplicoPMG = pensionConFox < P.PMG_LEY73;
+  return {
+    sbcMensual, grupo, semExc, aniosExc,
+    cuantiaBasica, incrementos, pensionAnualBase,
+    fEdad, pensionConEdad,
+    pctAsignaciones: pctAs, asignaciones, pensionConAsign,
+    pensionConFox, pensionFinal, aplicoPMG,
+    aplicaAyuda, semanas: p.semanas, edadRetiro: p.edadRetiro
+  };
+}
+
+/* =================================================================
+   6. MOTOR COMPARATIVO LEY 97
+   ================================================================= */
+
+function calcularPensionLey97(p) {
+  // Retiro programado simplificado: saldo / (esperanza años × 12), con rendimiento real durante pago
+  const saldo = Math.max(0, p.saldoAfore);
+  const esperanzaAnios = p.sexo === "M"
+    ? (p.edadRetiro >= 65 ? P.ESPERANZA.M65 : P.ESPERANZA.M60)
+    : (p.edadRetiro >= 65 ? P.ESPERANZA.H65 : P.ESPERANZA.H60);
+  const n = esperanzaAnios * 12;
+  const r = P.TASA_AFORE_REAL / 12;
+  let pagoMensRetiroProg;
+  if (r > 0) {
+    pagoMensRetiroProg = saldo * (r * Math.pow(1+r, n)) / (Math.pow(1+r, n) - 1);
+  } else {
+    pagoMensRetiroProg = saldo / n;
+  }
+  // Renta vitalicia simplificada: factor 0.85 (estimación de prima vitalicia + administración)
+  const rentaVitaliciaMens = pagoMensRetiroProg * 0.85;
+  const pensionFinal = Math.max(rentaVitaliciaMens, P.PMG_LEY97);
+  const aplicoPMG = rentaVitaliciaMens < P.PMG_LEY97;
+  return {
+    saldo, esperanzaAnios, pagoMensRetiroProg, rentaVitaliciaMens,
+    pensionFinal, aplicoPMG
+  };
+}
+
+/* =================================================================
+   7. MOTOR M40 PROSPECTIVA
+   ================================================================= */
+
+function proyectarM40Prospectiva(salarioMensual, mesesTotales, anioInicio) {
+  const salarioCap = Math.min(salarioMensual, tope_m40_mensual());
+  let acumulado = 0;
+  const detallePorAnio = [];
+  let mesesRest = mesesTotales;
+  let anio = anioInicio;
+  while (mesesRest > 0) {
+    const mesesEsteAnio = Math.min(12, mesesRest);
+    const pct = cuotaM40Anio(anio);
+    const costoMensual = salarioCap * (pct / 100);
+    const costoAnual = costoMensual * mesesEsteAnio;
+    acumulado += costoAnual;
+    detallePorAnio.push({ anio, meses: mesesEsteAnio, pct, salarioBase: salarioCap, costoMensual, costoAnual, acumulado });
+    mesesRest -= mesesEsteAnio; anio++;
+  }
+  return { salarioCap, totalInversion: acumulado, detallePorAnio };
+}
+
+function nuevoSBCConM40(salarioActual, salarioM40, mesesM40) {
+  // Las últimas 250 semanas ≈ 57.69 meses
+  const MES_250 = 250 * (12/52);
+  const sCap = Math.min(salarioM40, tope_m40_mensual());
+  const mesesEf = Math.min(mesesM40, MES_250);
+  const mesesAnt = MES_250 - mesesEf;
+  return (sCap * mesesEf + salarioActual * mesesAnt) / MES_250;
+}
+
+/* =================================================================
+   8. MOTOR M40 RETROACTIVA (Art. 287 LSS recargo 2.07%/mes)
+   ================================================================= */
+
+function calcularM40Retroactiva(brechas, salarioMensualBase, pctCuotaPeriodo) {
+  // brechas: [{desde, hasta, meses, elegible, incluir?}]
+  // Para cada brecha se acumulan los meses. Cuota base = salarioCap × pctCuotaPeriodo
+  // Recargo = cuota × 2.07% × mesesTranscurridos (lineal, acumulable Art. 287)
+  const salCap = Math.min(salarioMensualBase, tope_m40_mensual());
+  const cuotaBase = salCap * (pctCuotaPeriodo / 100);
+  const mesesIncluidos = brechas.filter(b => b.incluir !== false).reduce((s,b) => s + b.meses, 0);
+  const ahora = new Date();
+  const detalle = [];
+  let acumulado = 0;
+  let contador = 0;
+  brechas.filter(b => b.incluir !== false).forEach(b => {
+    for (let i = 0; i < b.meses; i++) {
+      contador++;
+      // mesesTranscurridos: meses entre el mes del periodo retro y hoy
+      const fechaMes = new Date(b.desde);
+      fechaMes.setMonth(fechaMes.getMonth() + i);
+      const mesesTrans = Math.max(1, mesesEntreFechas(fechaMes, ahora));
+      const recargo = cuotaBase * P.RECARGO_MENSUAL * mesesTrans;
+      const totalMes = cuotaBase + recargo;
+      acumulado += totalMes;
+      detalle.push({
+        idx: contador,
+        periodo: fechaToISO(fechaMes),
+        cuotaBase, mesesTrans, recargo, totalMes, acumulado
+      });
+    }
+  });
+  return {
+    salarioBase: salCap,
+    cuotaBase,
+    pctCuota: pctCuotaPeriodo,
+    mesesIncluidos,
+    semanasGanadas: mesesIncluidos * (52/12),
+    totalSinRecargo: cuotaBase * mesesIncluidos,
+    totalConRecargo: acumulado,
+    recargoTotal: acumulado - cuotaBase * mesesIncluidos,
+    detalle
+  };
+}
+
+/* =================================================================
+   9. MOTOR FINANCIERO (3 financieras · sistema francés)
+   ================================================================= */
+
+function calcularCredito(capital, tasaAnual, plazoMeses, comAperturaPct) {
+  const tasaMensual = (tasaAnual / 100) / 12;
+  const comisionApertura = capital * (comAperturaPct / 100);
+  const capitalFinanciado = capital + comisionApertura;
+  let mensualidad;
+  if (tasaMensual === 0) mensualidad = capitalFinanciado / plazoMeses;
+  else mensualidad = capitalFinanciado * (tasaMensual * Math.pow(1+tasaMensual, plazoMeses)) /
+                    (Math.pow(1+tasaMensual, plazoMeses) - 1);
+  const totalPagado = mensualidad * plazoMeses;
+  const interesesTotales = totalPagado - capitalFinanciado;
+  // Tabla amortización
+  const tabla = [];
+  let saldo = capitalFinanciado;
+  for (let m = 1; m <= plazoMeses; m++) {
+    const interes = saldo * tasaMensual;
+    const cap = mensualidad - interes;
+    saldo -= cap;
+    tabla.push({ mes: m, pago: mensualidad, interes, capital: cap, saldo: Math.max(0, saldo) });
+  }
+  // CAT aproximado (mensualidad → tasa efectiva sobre capital original)
+  function catApprox() {
+    // i tal que capital = mensualidad * (1 - (1+i)^-n)/i
+    let lo = 0, hi = 5, i = (tasaAnual/100)/12;
+    for (let k = 0; k < 60; k++) {
+      const mid = (lo+hi)/2;
+      const pv = mensualidad * (1 - Math.pow(1+mid, -plazoMeses)) / mid;
+      if (pv > capital) lo = mid; else hi = mid;
+    }
+    return (Math.pow(1 + (lo+hi)/2, 12) - 1) * 100;
+  }
+  const cat = catApprox();
+  return { capital, comisionApertura, capitalFinanciado, tasaAnual, tasaMensual, plazoMeses, mensualidad, totalPagado, interesesTotales, tabla, cat };
+}
+
+/* =================================================================
+   10. MOTOR DE COSTO DE OPORTUNIDAD
+   ================================================================= */
+
+function generarTablaEdades60a65(input) {
+  // Para cada edad 60..65: pensión asumiendo cotización continua con SBC actual
+  const filas = [];
+  let prevPension = 0;
+  for (let edad = 60; edad <= 65; edad++) {
+    const aniosExtra = Math.max(0, edad - input.edadActual);
+    const semanasExtra = input.sigueCotiz ? aniosExtra * 52 : 0;
+    const semanasProy = input.semanas + semanasExtra;
+    // Si sigue cotizando, asumimos SBC se mantiene
+    const sbcProm = input.sbcMensual;
+    const calc = calcularPensionLey73({
+      salarioMensual: sbcProm,
+      semanas: semanasProy,
+      edadRetiro: edad,
+      estadoCivil: input.estadoCivil,
+      numHijos: input.numHijos,
+      ayudaAsist: input.ayudaAsist,
+      aplicarFox: input.aplicarFox
+    });
+    const pensionMens = calc.pensionFinal;
+    const pensionAnual = pensionMens * 12;
+    // Costo de esperar: pensión dejada de recibir entre edad60 y edad actual de fila (anual × años de espera respecto a 60)
+    const aniosEspera = edad - 60;
+    const pensionA60 = filas[0]?.pensionMens || pensionMens;
+    const costoEsperar = pensionA60 * 12 * aniosEspera;
+    const mejoraMarginal = edad === 60 ? 0 : pensionMens - prevPension;
+    const mesesRecuperar = mejoraMarginal > 0 ? costoEsperar / mejoraMarginal : Infinity;
+    // Semáforo: verde si recuperar < 36m & mejora > 5%, amarillo intermedio, rojo si >120m o sin mejora
+    let semaforo = "🔴";
+    if (mejoraMarginal > 0 && mesesRecuperar < 36) semaforo = "🟢";
+    else if (mejoraMarginal > 0 && mesesRecuperar < 120) semaforo = "🟡";
+    filas.push({
+      edad, semanas: semanasProy, sbcProm, pensionMens, pensionAnual,
+      aplicoPMG: calc.aplicoPMG, costoEsperar, mejoraMarginal, mesesRecuperar, semaforo, calc
+    });
+    prevPension = pensionMens;
+  }
+  return filas;
+}
+
+function generarFlujoOportunidad(input, edadAlt, horizonteAnios) {
+  // Compara: opción A (retirarse a 60) vs opción B (esperar a edadAlt)
+  // Año a año desde edad60 hasta 60+horizonteAnios
+  // En A: recibes pensión60 mensual desde el inicio
+  // En B: no recibes nada hasta edadAlt; luego recibes pensiónAlt
+  const tabla = generarTablaEdades60a65(input);
+  const filaA = tabla[0];
+  const filaB = tabla.find(f => f.edad === edadAlt) || tabla[tabla.length-1];
+  const flujo = [];
+  let cumA = 0, cumB = 0;
+  for (let yr = 1; yr <= horizonteAnios; yr++) {
+    const edadEnYr = 60 + yr;
+    const incomeA = filaA.pensionMens * 12;
+    const incomeB = edadEnYr >= edadAlt ? filaB.pensionMens * 12 : 0;
+    cumA += incomeA;
+    cumB += incomeB;
+    flujo.push({
+      anio: yr, edad: edadEnYr,
+      incomeA, cumA,
+      incomeB, cumB,
+      diffAcum: cumB - cumA
+    });
+  }
+  // Punto de equilibrio (primer año donde cumB ≥ cumA)
+  const eq = flujo.find(f => f.diffAcum >= 0);
+  return {
+    filaA, filaB, flujo,
+    puntoEquilibrioAnios: eq ? eq.anio : null,
+    cumAtotal: flujo[flujo.length-1].cumA,
+    cumBtotal: flujo[flujo.length-1].cumB
+  };
+}
+
+
+/* =================================================================
+   ESTADO GLOBAL
+   ================================================================= */
+const appState = {
+  brechasSeleccionadas: [],
+  resultado: null,
+  charts: {},
+};
+
+function getInputs() {
+  const fechaNacEl = $("#i-fechaNac").value;
+  const fechaNac = parseDateMX(fechaNacEl);
+  const sbcDiario = parseFloat($("#i-sbcDiario").value) || 0;
+  const sbcMensual = sbcDiario * P.DIAS_MES;
+  return {
+    nombre: $("#i-nombre").value,
+    nss: $("#i-nss").value,
+    curp: $("#i-curp").value,
+    fechaNac,
+    sexo: $("#i-sexo").value,
+    edadActual: parseInt($("#i-edadActual").value) || 0,
+    edadRetiro: parseInt($("#i-edadRetiro").value) || 65,
+    primeraAlta: parseDateMX($("#i-primeraAlta").value),
+    semanas: parseFloat($("#i-semanas").value) || 0,
+    sbcDiario,
+    sbcMensual,
+    estadoCivil: $("#i-estadoCivil").value,
+    numHijos: parseInt($("#i-hijos").value) || 0,
+    ayudaAsist: $("#i-ayudaAsist").checked,
+    aplicarFox: $("#i-fox").checked,
+    sigueCotiz: $("#i-sigueCotiz").checked,
+    saldoAfore: parseFloat($("#i-afore").value) || 0,
+    aporteAfore: parseFloat($("#i-aporteAfore").value) || 0,
+    capitalDispo: parseFloat($("#i-capitalDispo").value) || 0,
+    salM40: parseFloat($("#i-salM40").value) || 0,
+    mesesM40: parseInt($("#i-mesesM40").value) || 0,
+    anioInicioM40: parseInt($("#i-anioInicio").value) || P.ANIO_MODELO,
+    salRetro: parseFloat($("#i-salRetro").value) || 0,
+    pctRetro: parseFloat($("#i-pctRetro").value) || 13.347,
+    edadAlt: parseInt($("#i-edadAlt").value) || 65,
+    horizonte: parseInt($("#i-horizonte").value) || 25,
+    capitalFin: parseFloat($("#i-capitalFin").value) || 0,
+    plazoFin: parseInt($("#i-plazoFin").value) || 60,
+    edadHoy: parseInt($("#i-edadActual").value) || 60,
+  };
+}
+
+function detectarRegimen(input) {
+  const corte = new Date(1997, 6, 1); // 1-jul-1997
+  if (input.primeraAlta && input.primeraAlta < corte) {
+    return {
+      regimen: "L73",
+      label: "Ley 1973 (transición)",
+      justificacion: `Primera alta IMSS detectada el ${fechaToISO(input.primeraAlta)}, anterior al 1 de julio de 1997. Tienes derecho a elegir entre Ley 73 y Ley 97 al momento del trámite (Art. 11 LSS Transitorios). Esta calculadora privilegia Ley 73 (régimen de beneficio definido), pero genera comparativa cruzada.`,
+      eligeAlternativo: true
+    };
+  } else {
+    return {
+      regimen: "L97",
+      label: "Ley 1997 (cuenta individual)",
+      justificacion: input.primeraAlta
+        ? `Primera alta el ${fechaToISO(input.primeraAlta)}, posterior al 1 de julio de 1997. Tu pensión se calcula con cuenta individual AFORE (retiro programado o renta vitalicia). Ley 73 se muestra como referencia hipotética.`
+        : "No se detectó fecha de primera alta; el régimen no puede determinarse con certeza. Captura la fecha o carga la constancia.",
+      eligeAlternativo: false
+    };
+  }
+}
+
+/* =================================================================
+   ORQUESTADOR PRINCIPAL
+   ================================================================= */
+function recalcular() {
+  const i = getInputs();
+  const val = validarEntradas(i);
+
+  // Régimen
+  const reg = detectarRegimen(i);
+
+  // Ley 73 base
+  const calcL73 = calcularPensionLey73({
+    salarioMensual: i.sbcMensual,
+    semanas: i.semanas,
+    edadRetiro: i.edadRetiro,
+    estadoCivil: i.estadoCivil,
+    numHijos: i.numHijos,
+    ayudaAsist: i.ayudaAsist,
+    aplicarFox: i.aplicarFox
+  });
+
+  // Ley 97
+  const calcL97 = calcularPensionLey97({
+    saldoAfore: i.saldoAfore,
+    sexo: i.sexo,
+    edadRetiro: i.edadRetiro
+  });
+
+  // Análisis por edades 60-65
+  const tablaEdades = generarTablaEdades60a65(i);
+
+  // Costo de oportunidad
+  const opo = generarFlujoOportunidad(i, i.edadAlt, i.horizonte);
+
+  // M40 Prospectiva
+  let m40Prosp = null, calcL73ConProsp = null;
+  if (i.mesesM40 > 0 && i.salM40 > 0) {
+    m40Prosp = proyectarM40Prospectiva(i.salM40, i.mesesM40, i.anioInicioM40);
+    const sbcNuevo = nuevoSBCConM40(i.sbcMensual, i.salM40, i.mesesM40);
+    const semanasConM40 = i.semanas + i.mesesM40 * (52/12);
+    calcL73ConProsp = calcularPensionLey73({
+      salarioMensual: sbcNuevo, semanas: semanasConM40,
+      edadRetiro: i.edadRetiro, estadoCivil: i.estadoCivil,
+      numHijos: i.numHijos, ayudaAsist: i.ayudaAsist, aplicarFox: i.aplicarFox
+    });
+    calcL73ConProsp.sbcNuevo = sbcNuevo;
+    calcL73ConProsp.semanasConM40 = semanasConM40;
+    calcL73ConProsp.gananciaVsBase = calcL73ConProsp.pensionFinal - calcL73.pensionFinal;
+    calcL73ConProsp.roiMeses = calcL73ConProsp.gananciaVsBase > 0 ? m40Prosp.totalInversion / calcL73ConProsp.gananciaVsBase : Infinity;
+  }
+
+  // M40 Retroactiva: usar brechas seleccionadas o capturadas manualmente
+  let m40Retro = null, calcL73ConRetro = null;
+  let brechasParaCalc = appState.brechasSeleccionadas.length
+    ? appState.brechasSeleccionadas.map(b => ({...b, incluir: true}))
+    : [];
+  // Si no hay brechas pero el usuario captura un periodo retro vía supuestos, usar default vacío
+  if (brechasParaCalc.length > 0 && i.salRetro > 0) {
+    m40Retro = calcularM40Retroactiva(brechasParaCalc, i.salRetro, i.pctRetro);
+    const semanasConRetro = i.semanas + m40Retro.semanasGanadas + (m40Prosp ? i.mesesM40 * (52/12) : 0);
+    const sbcNuevo = calcL73ConProsp?.sbcNuevo || i.sbcMensual;
+    calcL73ConRetro = calcularPensionLey73({
+      salarioMensual: sbcNuevo, semanas: semanasConRetro,
+      edadRetiro: i.edadRetiro, estadoCivil: i.estadoCivil,
+      numHijos: i.numHijos, ayudaAsist: i.ayudaAsist, aplicarFox: i.aplicarFox
+    });
+    calcL73ConRetro.semanasConRetro = semanasConRetro;
+    calcL73ConRetro.gananciaVsBase = calcL73ConRetro.pensionFinal - calcL73.pensionFinal;
+  }
+
+  // Financiamiento: capital = inv. M40 prosp + retro (a menos que se ingrese capital manual)
+  const invM40Total = (m40Prosp?.totalInversion || 0) + (m40Retro?.totalConRecargo || 0);
+  const capitalFin = i.capitalFin > 0 ? i.capitalFin : invM40Total;
+  const creditos = P.FINANCIERAS.map(f => {
+    const c = calcularCredito(capitalFin, f.tasaAnual, i.plazoFin, f.comAperturaPct);
+    const pensionBruta = (calcL73ConRetro || calcL73ConProsp || calcL73).pensionFinal;
+    const pensionNeta = pensionBruta - c.mensualidad;
+    const gananciaBruta = pensionBruta - calcL73.pensionFinal;
+    const costoFinanciero = c.interesesTotales + c.comisionApertura;
+    const mesesRecup = gananciaBruta > 0 ? (capitalFin + costoFinanciero) / gananciaBruta : Infinity;
+    return {
+      ...f, credito: c, pensionBruta, pensionNeta,
+      gananciaBruta, costoFinanciero, mesesRecup,
+      costoTotalConIMSS: capitalFin + costoFinanciero
+    };
+  });
+
+  // Construir resumen maestro
+  const opciones = construirResumenMaestro(i, calcL73, calcL97, calcL73ConProsp, calcL73ConRetro, m40Prosp, m40Retro, creditos);
+
+  // Generar recomendación
+  const reco = motorRecomendacion(i, opciones, opo, tablaEdades);
+
+  appState.resultado = {
+    input: i, validaciones: val, regimen: reg,
+    calcL73, calcL97, calcL73ConProsp, calcL73ConRetro,
+    m40Prosp, m40Retro, creditos, tablaEdades, opo,
+    opciones, reco, brechasParaCalc, capitalFin
+  };
+
+  renderTodo();
+}
+
+function construirResumenMaestro(i, l73, l97, prosp, retro, m40p, m40r, creds) {
+  const opciones = [];
+  // 1. Retiro inmediato (Ley 73 hoy)
+  opciones.push({
+    id: "INMEDIATO",
+    nombre: "Retiro inmediato",
+    pensionMens: l73.pensionFinal,
+    semanas: i.semanas, sbcProm: l73.sbcMensual,
+    inversionInicial: 0, mensualidadAdicional: 0, costoFinanciero: 0,
+    costoOportunidad: 0, mesesRecuperar: 0,
+    riesgo: "Bajo", complejidad: "Baja", liquidez: "Nula"
+  });
+  // 2. Seguir cotizando hasta edad de retiro (sin M40)
+  const filaEdadObj = appState.tablaEdadesCache?.find(f => f.edad === i.edadRetiro);
+  if (i.edadRetiro > i.edadActual) {
+    const aniosEspera = i.edadRetiro - i.edadActual;
+    const semanasFuturo = i.semanas + (i.sigueCotiz ? aniosEspera * 52 : 0);
+    const calcFut = calcularPensionLey73({
+      salarioMensual: i.sbcMensual, semanas: semanasFuturo,
+      edadRetiro: i.edadRetiro, estadoCivil: i.estadoCivil,
+      numHijos: i.numHijos, ayudaAsist: i.ayudaAsist, aplicarFox: i.aplicarFox
+    });
+    opciones.push({
+      id: "SEGUIR_COTIZANDO",
+      nombre: "Seguir cotizando (sin M40)",
+      pensionMens: calcFut.pensionFinal,
+      semanas: semanasFuturo, sbcProm: i.sbcMensual,
+      inversionInicial: 0, mensualidadAdicional: 0, costoFinanciero: 0,
+      costoOportunidad: l73.pensionFinal * 12 * aniosEspera,
+      mesesRecuperar: (calcFut.pensionFinal - l73.pensionFinal) > 0
+        ? (l73.pensionFinal * 12 * aniosEspera) / (calcFut.pensionFinal - l73.pensionFinal) : Infinity,
+      riesgo: "Bajo", complejidad: "Baja", liquidez: "Nula"
+    });
+  }
+  // 3. M40 Prospectiva con recursos propios
+  if (prosp) {
+    const aniosEspera = i.edadRetiro - i.edadActual;
+    const costoOportunidad = l73.pensionFinal * 12 * aniosEspera;
+    opciones.push({
+      id: "M40_PROSP",
+      nombre: "M40 prospectiva (recursos propios)",
+      pensionMens: prosp.pensionFinal,
+      semanas: prosp.semanasConM40, sbcProm: prosp.sbcNuevo,
+      inversionInicial: m40p.totalInversion, mensualidadAdicional: 0, costoFinanciero: 0,
+      costoOportunidad,
+      mesesRecuperar: prosp.gananciaVsBase > 0 ? m40p.totalInversion / prosp.gananciaVsBase : Infinity,
+      riesgo: "Bajo-medio", complejidad: "Media", liquidez: "Alta"
+    });
+  }
+  // 4. M40 Retroactiva con recursos propios
+  if (retro) {
+    opciones.push({
+      id: "M40_RETRO_PROPIOS",
+      nombre: "M40 retro (recursos propios)",
+      pensionMens: retro.pensionFinal,
+      semanas: retro.semanasConRetro, sbcProm: retro.sbcMensual,
+      inversionInicial: m40r.totalConRecargo, mensualidadAdicional: 0, costoFinanciero: 0,
+      costoOportunidad: 0,
+      mesesRecuperar: retro.gananciaVsBase > 0 ? m40r.totalConRecargo / retro.gananciaVsBase : Infinity,
+      riesgo: "Medio", complejidad: "Alta", liquidez: "Muy alta"
+    });
+  }
+  // 5,6,7. M40 + crédito 3 bancos
+  creds.forEach(c => {
+    opciones.push({
+      id: "M40_RETRO_" + c.id,
+      nombre: "M40 + crédito " + c.nombre,
+      pensionMens: c.pensionBruta,
+      pensionNeta: c.pensionNeta,
+      semanas: (retro || prosp || l73).semanas,
+      sbcProm: (retro?.sbcMensual || prosp?.sbcNuevo || l73.sbcMensual),
+      inversionInicial: c.credito.comisionApertura,
+      mensualidadAdicional: c.credito.mensualidad,
+      costoFinanciero: c.credito.interesesTotales,
+      costoOportunidad: 0,
+      mesesRecuperar: c.mesesRecup,
+      riesgo: "Medio-alto", complejidad: "Alta", liquidez: "Baja"
+    });
+  });
+  // 8. Ley 97 referencia
+  opciones.push({
+    id: "LEY97",
+    nombre: "Ley 97 (referencia)",
+    pensionMens: l97.pensionFinal,
+    semanas: i.semanas, sbcProm: l73.sbcMensual,
+    inversionInicial: 0, mensualidadAdicional: 0, costoFinanciero: 0,
+    costoOportunidad: 0, mesesRecuperar: 0,
+    riesgo: "Alto (sensible a rendimientos)", complejidad: "Baja", liquidez: "Nula"
+  });
+
+  // Cálculos derivados de flujo neto
+  const aniosEsperaProm = i.edadRetiro - i.edadActual;
+  opciones.forEach(o => {
+    const pensionNeta = o.pensionNeta ?? o.pensionMens;
+    const flujoAnual = pensionNeta * 12;
+    // Flujo neto a N años desde el retiro = flujo - costoTotal - costoOportunidad
+    const costoTotal = (o.inversionInicial || 0) + (o.costoFinanciero || 0);
+    o.flujo10 = flujoAnual * 10 - costoTotal - (o.costoOportunidad || 0);
+    o.flujo20 = flujoAnual * 20 - costoTotal - (o.costoOportunidad || 0);
+    o.flujo25 = flujoAnual * 25 - costoTotal - (o.costoOportunidad || 0);
+  });
+
+  // Score: pensión normalizada + recuperación + simplicidad
+  const maxP = Math.max(...opciones.map(o => o.pensionMens));
+  const maxRecup = Math.max(...opciones.map(o => isFinite(o.mesesRecuperar) ? o.mesesRecuperar : 0)) || 1;
+  opciones.forEach(o => {
+    const pensionScore = o.pensionMens / maxP * 50;
+    const recupScore = isFinite(o.mesesRecuperar) && o.mesesRecuperar > 0
+      ? (1 - Math.min(1, o.mesesRecuperar / 120)) * 25 : 25;
+    const complejidadMap = { "Baja": 25, "Media": 18, "Alta": 10, "Bajo": 25, "Bajo-medio": 20, "Medio": 15, "Medio-alto": 10, "Alto (sensible a rendimientos)": 5 };
+    const complScore = (complejidadMap[o.complejidad] || 15) * 0.5
+                      + (complejidadMap[o.riesgo] || 15) * 0.5;
+    o.score = Math.round(pensionScore + recupScore + complScore * 0.25);
+  });
+  opciones.sort((a,b) => b.score - a.score);
+  opciones.forEach((o,idx) => o.rank = idx + 1);
+  return opciones;
+}
+
+/* =================================================================
+   13. MOTOR DE RECOMENDACIÓN
+   ================================================================= */
+function motorRecomendacion(i, opciones, opo, tablaEdades) {
+  const best = opciones[0];
+  const peor = opciones[opciones.length - 1];
+  const inmediato = opciones.find(o => o.id === "INMEDIATO");
+  const mejorSinDeuda = opciones.find(o => o.costoFinanciero === 0 && o.id !== "INMEDIATO" && o.id !== "LEY97") || inmediato;
+  const mejorConDeuda = opciones.find(o => o.costoFinanciero > 0);
+
+  const esperanzaAnios = i.sexo === "M" ? P.ESPERANZA.M60 : P.ESPERANZA.H60;
+  const mensajes = [];
+
+  mensajes.push(`<p><span class="key">La opción más conveniente</span> según el modelo es <strong>${best.nombre}</strong>, con pensión mensual de <strong>${fmtMoney(best.pensionMens)}</strong> (score ${best.score}/100). Combina una mejora significativa respecto al retiro inmediato con un horizonte de recuperación razonable.</p>`);
+
+  if (mejorSinDeuda && mejorSinDeuda.id !== "INMEDIATO") {
+    const mejora = mejorSinDeuda.pensionMens - inmediato.pensionMens;
+    mensajes.push(`<p><span class="key">Sin contratar deuda</span>, la mejor alternativa es <strong>${mejorSinDeuda.nombre}</strong>: mejora de <strong>${fmtMoney(mejora)}/mes</strong> con una inversión inicial de <strong>${fmtMoney(mejorSinDeuda.inversionInicial)}</strong> y recuperación en <strong>${fmtMeses(mejorSinDeuda.mesesRecuperar)}</strong>. Esta opción te deja mayor liquidez y menor riesgo.</p>`);
+  }
+
+  if (mejorConDeuda) {
+    const mensP = mejorConDeuda.mensualidadAdicional;
+    const pensionNeta = mejorConDeuda.pensionNeta ?? (mejorConDeuda.pensionMens - mensP);
+    const flujoNetoOk = pensionNeta > inmediato.pensionMens;
+    mensajes.push(`<p><span class="key">La opción con mayor pensión bruta pero mayor riesgo</span> es <strong>${mejorConDeuda.nombre}</strong> (${fmtMoney(mejorConDeuda.pensionMens)}/mes bruto). Mensualidad del crédito: <strong>${fmtMoney(mensP)}</strong> → <strong>flujo neto pensión ${fmtMoney(pensionNeta)}/mes</strong> ${flujoNetoOk ? '✓ mayor que retiro inmediato' : '⚠ menor que retiro inmediato durante el crédito'}. Solo recomendable si tienes capacidad de pago acreditada y la mejora del flujo neto justifica la complejidad.</p>`);
+  }
+
+  // Análisis edades
+  const fila65 = tablaEdades[5], fila60 = tablaEdades[0];
+  if (fila65 && fila60) {
+    const mejora6065 = fila65.pensionMens - fila60.pensionMens;
+    if (fila65.mesesRecuperar > esperanzaAnios * 12) {
+      mensajes.push(`<p><span class="key">Esperar hasta 65 no parece óptimo</span>: la mejora marginal (${fmtMoney(mejora6065)}/mes) se recuperaría en ${fmtMeses(fila65.mesesRecuperar)}, lo que excede tu esperanza de vida en el retiro (≈${esperanzaAnios.toFixed(1)} años desde los 60). En términos puramente financieros, retirarse antes y aprovechar el flujo es más eficiente.</p>`);
+    } else if (mejora6065 / fila60.pensionMens > 0.15) {
+      mensajes.push(`<p><span class="key">Esperar a 65 sí mejora sustancialmente la pensión</span> (${fmtPct(mejora6065/fila60.pensionMens*100,1)} más), con recuperación en ${fmtMeses(fila65.mesesRecuperar)}. Considera esperar si tu salud y empleo lo permiten.</p>`);
+    }
+  }
+
+  // PMG
+  if (inmediato.pensionMens <= P.PMG_LEY73 + 1) {
+    mensajes.push(`<p><span class="key">Tu cálculo cae sobre la PMG</span> (${fmtMoney(P.PMG_LEY73)}). El SBC actual es relativamente bajo; M40 con salario tope (25 UMA) tendría un impacto desproporcionadamente alto.</p>`);
+  }
+
+  // Capacidad
+  if (i.capitalDispo < (best.inversionInicial || 0) && (best.inversionInicial || 0) > 0) {
+    mensajes.push(`<p><span class="key">Atención de liquidez:</span> la opción ganadora requiere ${fmtMoney(best.inversionInicial)} y tú declaraste ${fmtMoney(i.capitalDispo)} disponibles. Considera la opción financiada o ahorrar antes de iniciar M40.</p>`);
+  }
+
+  // Brechas
+  if (i.semanas < 500) {
+    mensajes.push(`<div class="alert alert-danger"><strong>⚠ No alcanzas las 500 semanas mínimas (Art. 145).</strong> Para tener derecho a pensión bajo Ley 73 necesitas al menos 500 semanas. Te faltan <strong>${500-i.semanas}</strong> semanas. M40 retroactiva puede ayudarte a alcanzar el mínimo.</div>`);
+  }
+
+  return mensajes.join("\n");
+}
+
+
+/* =================================================================
+   11. RENDER DE TABLAS Y SECCIONES
+   ================================================================= */
+
+function renderTodo() {
+  const r = appState.resultado;
+  if (!r) return;
+
+  renderRegimen(r);
+  renderPensionBase(r);
+  renderEdades(r);
+  renderOportunidad(r);
+  renderM40Prosp(r);
+  renderM40Retro(r);
+  renderFinanciamiento(r);
+  renderLey97(r);
+  renderResumenMaestro(r);
+  $("#reco-output").innerHTML = r.reco;
+  renderFormulas();
+  renderSupuestos();
+  renderCharts(r);
+
+  // Validaciones / warnings
+  if (r.validaciones.warnings.length || r.validaciones.errores.length) {
+    let html = "";
+    if (r.validaciones.errores.length) {
+      html += `<div class="alert alert-danger"><strong>Errores:</strong><ul style="margin:6px 0 0 18px;">` +
+        r.validaciones.errores.map(e => `<li>${e}</li>`).join("") + `</ul></div>`;
+    }
+    if (r.validaciones.warnings.length) {
+      html += `<div class="alert alert-warn"><strong>Advertencias:</strong><ul style="margin:6px 0 0 18px;">` +
+        r.validaciones.warnings.map(e => `<li>${e}</li>`).join("") + `</ul></div>`;
+    }
+    $("#pension-base").insertAdjacentHTML("afterbegin", html);
+  }
+}
+
+function renderRegimen(r) {
+  const reg = r.regimen;
+  const cls = reg.regimen === "L73" ? "alert-success" : "alert-info";
+  $("#regimen-resultado").innerHTML = `
+    <div class="alert ${cls}">
+      <strong>Régimen detectado: ${reg.label}</strong>
+      ${reg.justificacion}
+    </div>
+    <div class="kpi-grid mt-12">
+      <div class="kpi"><div class="label">Régimen</div><div class="value">${reg.regimen}</div></div>
+      <div class="kpi"><div class="label">PMG aplicable</div><div class="value">${fmtMoney(reg.regimen === "L73" ? P.PMG_LEY73 : P.PMG_LEY97)}</div></div>
+      <div class="kpi"><div class="label">Base del beneficio</div><div class="value" style="font-size:14px;">${reg.regimen === "L73" ? "Beneficio definido (SBC últimas 250 semanas)" : "Cuenta individual AFORE"}</div></div>
+    </div>
+  `;
+}
+
+function renderPensionBase(r) {
+  const c = r.calcL73;
+  const i = r.input;
+  $("#pension-base").innerHTML = `
+    <div class="kpi-grid mb-16">
+      <div class="kpi primary">
+        <div class="label">Pensión Ley 73 base</div>
+        <div class="value lg">${fmtMoney(c.pensionFinal)}</div>
+        <div class="sub">${c.aplicoPMG ? "Aplicó PMG (piso)" : "Cálculo normal"}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Cuantía básica</div>
+        <div class="value">${fmtMoney(c.cuantiaBasica)}</div>
+        <div class="sub">${fmtPct(c.grupo.cuantiaBasica)} del SBC</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Incrementos por semanas excedentes</div>
+        <div class="value">${fmtMoney(c.incrementos)}</div>
+        <div class="sub">${c.semExc.toFixed(0)} sem · ${fmtPct(c.grupo.incrementoAnual)}/año</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Factor edad (${i.edadRetiro} a)</div>
+        <div class="value">${fmtPct(c.fEdad*100, 0)}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Asignaciones familiares</div>
+        <div class="value">${fmtMoney(c.asignaciones)}</div>
+        <div class="sub">${fmtPct(c.pctAsignaciones*100, 0)} del subtotal</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Factor Fox</div>
+        <div class="value">${i.aplicarFox ? "×1.11" : "No"}</div>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Paso del cálculo</th><th class="num">Valor</th><th>Referencia</th></tr></thead>
+        <tbody>
+          <tr><td>SBC mensual (cap a 25 UMA)</td><td class="num">${fmtMoney(c.sbcMensual)}</td><td>Tope ${fmtMoney(tope_m40_mensual())}</td></tr>
+          <tr><td>Veces UMA del salario</td><td class="num">${fmt(c.grupo.vecesUMA, 3)}</td><td>Renglón Art. 167: ${c.grupo.limInf}–${c.grupo.limSup}</td></tr>
+          <tr><td>% cuantía básica</td><td class="num">${fmtPct(c.grupo.cuantiaBasica)}</td><td>Tabla Art. 167 LSS 73</td></tr>
+          <tr><td>Cuantía básica mensual</td><td class="num">${fmtMoney(c.cuantiaBasica)}</td><td>= SBC × % CB</td></tr>
+          <tr><td>Semanas excedentes (sobre 500)</td><td class="num">${c.semExc}</td><td>${c.aniosExc.toFixed(2)} años</td></tr>
+          <tr><td>% incremento anual</td><td class="num">${fmtPct(c.grupo.incrementoAnual)}</td><td>Tabla Art. 167</td></tr>
+          <tr><td>Incrementos por semanas</td><td class="num">${fmtMoney(c.incrementos)}</td><td>= SBC × %inc × años exc</td></tr>
+          <tr><td>Pensión anual base</td><td class="num">${fmtMoney(c.pensionAnualBase)}</td><td>= CB + incrementos</td></tr>
+          <tr><td>Factor edad (${i.edadRetiro})</td><td class="num">${c.fEdad.toFixed(2)}</td><td>Art. 171 LSS 73 (CEAV)</td></tr>
+          <tr><td>Pensión con edad</td><td class="num">${fmtMoney(c.pensionConEdad)}</td><td>= base × factor edad</td></tr>
+          <tr><td>Asignaciones (${fmtPct(c.pctAsignaciones*100,0)})</td><td class="num">${fmtMoney(c.asignaciones)}</td><td>Cónyuge 15% · hijo 10% · ayuda 15%</td></tr>
+          <tr><td>Pensión con asignaciones</td><td class="num">${fmtMoney(c.pensionConAsign)}</td><td></td></tr>
+          <tr><td>Factor Fox (${i.aplicarFox?"×1.11":"no aplica"})</td><td class="num">${fmtMoney(c.pensionConFox)}</td><td>Decreto Fox 2004</td></tr>
+          <tr class="total"><td>Pensión final ${c.aplicoPMG?"(PMG)":""}</td><td class="num">${fmtMoney(c.pensionFinal)}</td><td>${c.aplicoPMG?"piso PMG aplicado":"resultado del cálculo"}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderEdades(r) {
+  const tb = $("#tbl-edades tbody"); tb.innerHTML = "";
+  r.tablaEdades.forEach(f => {
+    tb.insertAdjacentHTML("beforeend", `<tr>
+      <td><strong>${f.edad}</strong></td>
+      <td class="num">${fmtInt(f.semanas)}</td>
+      <td class="num">${fmtMoney(f.sbcProm)}</td>
+      <td class="num">${fmtMoney(f.pensionMens)}</td>
+      <td class="num">${fmtMoney(f.pensionAnual)}</td>
+      <td>${f.aplicoPMG?'<span class="tag tag-warn">Sí</span>':'<span class="tag tag-success">No</span>'}</td>
+      <td class="num">${fmtMoney(f.costoEsperar)}</td>
+      <td class="num">${f.mejoraMarginal>0?'+'+fmtMoney(f.mejoraMarginal):fmtMoney(f.mejoraMarginal)}</td>
+      <td class="num">${fmtMeses(f.mesesRecuperar)}</td>
+      <td class="semaforo center">${f.semaforo}</td>
+    </tr>`);
+  });
+}
+
+function renderOportunidad(r) {
+  const opo = r.opo;
+  const tb = $("#tbl-opo tbody"); tb.innerHTML = "";
+  opo.flujo.forEach(f => {
+    const eq = opo.puntoEquilibrioAnios === f.anio;
+    tb.insertAdjacentHTML("beforeend", `<tr class="${eq?'row-best':''}">
+      <td>${f.anio} (edad ${f.edad})</td>
+      <td class="num">${fmtMoney(f.cumA)}</td>
+      <td class="num">${fmtMoney(f.cumB)}</td>
+      <td class="num" style="color:${f.diffAcum>=0?'var(--success)':'var(--danger)'}">${f.diffAcum>=0?'+':''}${fmtMoney(f.diffAcum)}</td>
+      <td>${eq?'<span class="tag tag-success">Punto de equilibrio</span>':(f.diffAcum>=0?'Esperar conviene':'Retirarse conviene')}</td>
+    </tr>`);
+  });
+  $("#kpi-opo").innerHTML = `
+    <div class="kpi"><div class="label">Edad alternativa</div><div class="value">${opo.filaB.edad} años</div></div>
+    <div class="kpi"><div class="label">Pensión a 60</div><div class="value">${fmtMoney(opo.filaA.pensionMens)}</div></div>
+    <div class="kpi"><div class="label">Pensión a ${opo.filaB.edad}</div><div class="value">${fmtMoney(opo.filaB.pensionMens)}</div></div>
+    <div class="kpi ${opo.puntoEquilibrioAnios?'good':'bad'}">
+      <div class="label">Punto de equilibrio</div>
+      <div class="value">${opo.puntoEquilibrioAnios?opo.puntoEquilibrioAnios+' años':'Nunca en el horizonte'}</div>
+      <div class="sub">${opo.puntoEquilibrioAnios?'Esperar paga si vives más de '+(60+opo.puntoEquilibrioAnios)+' años':''}</div>
+    </div>
+    <div class="kpi"><div class="label">Acumulado retiro a 60</div><div class="value">${fmtMoney(opo.cumAtotal,0)}</div></div>
+    <div class="kpi"><div class="label">Acumulado esperar</div><div class="value">${fmtMoney(opo.cumBtotal,0)}</div></div>
+  `;
+}
+
+function renderM40Prosp(r) {
+  if (!r.m40Prosp) {
+    $("#kpi-m40-prosp").innerHTML = `<div class="kpi"><div class="label">Modalidad 40 Prospectiva</div><div class="value">Sin datos</div><div class="sub">Captura meses y salario M40 para simular.</div></div>`;
+    $("#tbl-m40-prosp tbody").innerHTML = "";
+    return;
+  }
+  const m = r.m40Prosp;
+  const c = r.calcL73ConProsp;
+  $("#kpi-m40-prosp").innerHTML = `
+    <div class="kpi primary"><div class="label">Pensión con M40</div><div class="value lg">${fmtMoney(c.pensionFinal)}</div><div class="sub">vs base ${fmtMoney(r.calcL73.pensionFinal)}</div></div>
+    <div class="kpi good"><div class="label">Mejora mensual</div><div class="value">+${fmtMoney(c.gananciaVsBase)}</div></div>
+    <div class="kpi"><div class="label">Inversión total</div><div class="value">${fmtMoney(m.totalInversion)}</div></div>
+    <div class="kpi"><div class="label">SBC promedio nuevo</div><div class="value">${fmtMoney(c.sbcNuevo)}</div></div>
+    <div class="kpi"><div class="label">Semanas finales</div><div class="value">${fmtInt(c.semanasConM40)}</div></div>
+    <div class="kpi ${c.roiMeses<60?'good':'warn'}"><div class="label">Recuperación</div><div class="value">${fmtMeses(c.roiMeses)}</div></div>
+  `;
+  const tb = $("#tbl-m40-prosp tbody"); tb.innerHTML = "";
+  m.detallePorAnio.forEach(d => {
+    tb.insertAdjacentHTML("beforeend", `<tr>
+      <td>${d.anio}</td>
+      <td class="num">${d.meses}</td>
+      <td class="num">${fmtPct(d.pct,3)}</td>
+      <td class="num">${fmtMoney(d.costoMensual)}</td>
+      <td class="num">${fmtMoney(d.costoAnual)}</td>
+      <td class="num">${fmtMoney(d.acumulado)}</td>
+    </tr>`);
+  });
+  tb.insertAdjacentHTML("beforeend", `<tr class="total">
+    <td colspan="4">Total inversión M40 prospectiva</td>
+    <td class="num">${fmtMoney(m.totalInversion)}</td>
+    <td class="num">—</td>
+  </tr>`);
+}
+
+function renderM40Retro(r) {
+  if (!r.m40Retro) {
+    $("#kpi-m40-retro").innerHTML = `<div class="kpi"><div class="label">M40 Retroactiva</div><div class="value">Sin brechas</div><div class="sub">Carga constancia o captura brechas para calcular.</div></div>`;
+    $("#tbl-m40-retro-mes tbody").innerHTML = "";
+    return;
+  }
+  const m = r.m40Retro;
+  const c = r.calcL73ConRetro;
+  $("#kpi-m40-retro").innerHTML = `
+    <div class="kpi primary"><div class="label">Pensión con M40 retro</div><div class="value lg">${fmtMoney(c.pensionFinal)}</div><div class="sub">vs base ${fmtMoney(r.calcL73.pensionFinal)}</div></div>
+    <div class="kpi good"><div class="label">Mejora mensual</div><div class="value">+${fmtMoney(c.gananciaVsBase)}</div></div>
+    <div class="kpi warn"><div class="label">Costo total con recargo</div><div class="value">${fmtMoney(m.totalConRecargo)}</div></div>
+    <div class="kpi"><div class="label">Costo sin recargo</div><div class="value">${fmtMoney(m.totalSinRecargo)}</div></div>
+    <div class="kpi bad"><div class="label">Recargo total</div><div class="value">${fmtMoney(m.recargoTotal)}</div></div>
+    <div class="kpi"><div class="label">Semanas ganadas</div><div class="value">${fmtInt(m.semanasGanadas)}</div></div>
+  `;
+  const tb = $("#tbl-m40-retro-mes tbody"); tb.innerHTML = "";
+  // mostrar primeros 60 detalles para no saturar
+  const lim = Math.min(m.detalle.length, 120);
+  m.detalle.slice(0, lim).forEach(d => {
+    tb.insertAdjacentHTML("beforeend", `<tr>
+      <td>${d.idx}</td>
+      <td>${d.periodo}</td>
+      <td class="num">${fmtMoney(d.cuotaBase)}</td>
+      <td class="num">${fmt(d.mesesTrans,1)}</td>
+      <td class="num">${fmtMoney(d.recargo)}</td>
+      <td class="num">${fmtMoney(d.totalMes)}</td>
+      <td class="num">${fmtMoney(d.acumulado)}</td>
+    </tr>`);
+  });
+  if (m.detalle.length > lim) {
+    tb.insertAdjacentHTML("beforeend",
+      `<tr><td colspan="7" class="center muted">... (${m.detalle.length - lim} filas adicionales omitidas)</td></tr>`);
+  }
+  tb.insertAdjacentHTML("beforeend", `<tr class="total">
+    <td colspan="4">Total inversión retroactiva</td>
+    <td class="num">${fmtMoney(m.recargoTotal)}</td>
+    <td class="num">${fmtMoney(m.totalConRecargo)}</td>
+    <td class="num">${fmtMoney(m.totalConRecargo)}</td>
+  </tr>`);
+}
+
+function renderFinanciamiento(r) {
+  // Render parámetros editables
+  $("#fin-params").innerHTML = P.FINANCIERAS.map((f, i) => `
+    <div class="field">
+      <label>${f.nombre} <span class="tag tag-editable" style="font-size:9px;">editable</span></label>
+      <div class="row-inline">
+        <input class="input mono small" type="number" data-fin-tasa="${i}" step="0.1" value="${f.tasaAnual}" title="Tasa anual %">
+        <span class="muted text-xs">% anual</span>
+      </div>
+      <div class="row-inline mt-8">
+        <input class="input mono small" type="number" data-fin-com="${i}" step="0.1" value="${f.comAperturaPct}" title="Comisión apertura %">
+        <span class="muted text-xs">% apertura</span>
+      </div>
+    </div>
+  `).join("");
+
+  const tb = $("#tbl-financia tbody"); tb.innerHTML = "";
+  r.creditos.forEach((c, idx) => {
+    const conv = c.gananciaBruta > c.credito.mensualidad ? "🟢 Conviene" : (c.gananciaBruta > 0 ? "🟡 Marginal" : "🔴 No conviene");
+    tb.insertAdjacentHTML("beforeend", `<tr>
+      <td><strong style="color:${c.color}">${c.nombre}</strong></td>
+      <td class="num">${fmtPct(c.tasaAnual,2)}</td>
+      <td class="num">${fmtPct(c.comAperturaPct,2)}</td>
+      <td class="num">${fmtPct(c.credito.cat,2)}</td>
+      <td class="num">${fmtMoney(c.credito.mensualidad)}</td>
+      <td class="num">${fmtMoney(c.credito.totalPagado)}</td>
+      <td class="num">${fmtMoney(c.credito.interesesTotales)}</td>
+      <td class="num">${fmtMoney(c.costoTotalConIMSS)}</td>
+      <td class="num">${fmtMoney(c.pensionNeta)}</td>
+      <td class="num">${fmtMeses(c.mesesRecup)}</td>
+      <td>${conv}</td>
+    </tr>`);
+  });
+  // amortización Banorte
+  const amortTb = $("#tbl-amort tbody"); amortTb.innerHTML = "";
+  if (r.creditos[0]) {
+    r.creditos[0].credito.tabla.forEach(row => {
+      amortTb.insertAdjacentHTML("beforeend", `<tr>
+        <td>${row.mes}</td>
+        <td class="num">${fmtMoney(row.pago)}</td>
+        <td class="num">${fmtMoney(row.interes)}</td>
+        <td class="num">${fmtMoney(row.capital)}</td>
+        <td class="num">${fmtMoney(row.saldo)}</td>
+      </tr>`);
+    });
+  }
+}
+
+function renderLey97(r) {
+  const tb = $("#tbl-ley97 tbody"); tb.innerHTML = "";
+  const l97 = r.calcL97;
+  const l73 = r.calcL73;
+  const rows = [
+    {
+      modo: "Ley 73 (beneficio definido)", base: "SBC últimas 250 semanas",
+      pension: l73.pensionFinal, certeza: "Alta (vitalicia y actualizada)",
+      herencia: "Pensión a viuda/orfandad (no saldo)",
+      sens: "Baja", riesgo: "Bajo (UMA actualiza el monto)", conv: "🟢 Preferida si aplica"
+    },
+    {
+      modo: "Ley 97 — Retiro programado", base: `AFORE ${fmtMoney(r.input.saldoAfore)} / esperanza ${l97.esperanzaAnios}a`,
+      pension: l97.pagoMensRetiroProg, certeza: "Media (puede agotarse)",
+      herencia: "Saldo remanente sí heredable",
+      sens: "Alta", riesgo: "Alto (longevidad y rendimientos)", conv: "🟡 Sólo Ley 97"
+    },
+    {
+      modo: "Ley 97 — Renta vitalicia", base: "Prima a aseguradora (~85% del retiro prog.)",
+      pension: l97.rentaVitaliciaMens, certeza: "Alta (vitalicia)",
+      herencia: "Generalmente no",
+      sens: "Media (rendimiento inicial)", riesgo: "Medio", conv: "🟡 Sólo Ley 97"
+    },
+    {
+      modo: "PMG Ley 97 (piso)", base: "PMG 2026 oficial",
+      pension: P.PMG_LEY97, certeza: "Alta",
+      herencia: "No", sens: "Nula", riesgo: "Bajo", conv: "Piso garantizado"
+    },
+  ];
+  rows.forEach(r => {
+    tb.insertAdjacentHTML("beforeend", `<tr>
+      <td><strong>${r.modo}</strong></td>
+      <td class="text-xs">${r.base}</td>
+      <td class="num"><strong>${fmtMoney(r.pension)}</strong></td>
+      <td class="text-xs">${r.certeza}</td>
+      <td class="text-xs">${r.herencia}</td>
+      <td class="text-xs">${r.sens}</td>
+      <td class="text-xs">${r.riesgo}</td>
+      <td>${r.conv}</td>
+    </tr>`);
+  });
+}
+
+function renderResumenMaestro(r) {
+  const tb = $("#tbl-resumen tbody"); tb.innerHTML = "";
+  r.opciones.forEach((o, idx) => {
+    const cls = idx === 0 ? "row-best" : (idx === r.opciones.length-1 ? "row-bad" : "");
+    const emoji = idx === 0 ? "⭐" : (idx <= 2 ? "🥈" : (idx <= 3 ? "🥉" : ""));
+    tb.insertAdjacentHTML("beforeend", `<tr class="${cls}">
+      <td><strong>${emoji} ${o.nombre}</strong></td>
+      <td class="num">${fmtMoney(o.pensionMens)}</td>
+      <td class="num">${fmtMoney(o.pensionMens*12,0)}</td>
+      <td class="num">${fmtInt(o.semanas)}</td>
+      <td class="num">${fmtMoney(o.sbcProm,0)}</td>
+      <td class="num">${o.inversionInicial?fmtMoney(o.inversionInicial,0):'—'}</td>
+      <td class="num">${o.mensualidadAdicional?fmtMoney(o.mensualidadAdicional):'—'}</td>
+      <td class="num">${o.costoFinanciero?fmtMoney(o.costoFinanciero,0):'—'}</td>
+      <td class="num">${o.costoOportunidad?fmtMoney(o.costoOportunidad,0):'—'}</td>
+      <td class="num">${o.mesesRecuperar?fmtMeses(o.mesesRecuperar):'—'}</td>
+      <td class="num">${fmtMoney(o.flujo10,0)}</td>
+      <td class="num">${fmtMoney(o.flujo20,0)}</td>
+      <td class="num">${fmtMoney(o.flujo25,0)}</td>
+      <td class="text-xs">${o.riesgo}</td>
+      <td class="text-xs">${o.complejidad}</td>
+      <td class="text-xs">${o.liquidez}</td>
+      <td class="center">${idx===0?'<span class="tag tag-success">SI</span>':idx<3?'<span class="tag tag-estimado">OK</span>':'<span class="tag">—</span>'}</td>
+      <td class="num"><strong>${o.score}</strong></td>
+    </tr>`);
+  });
+}
+
+function renderFormulas() {
+  $("#formulas-body").innerHTML = `
+    <h4 style="font-size:13px;color:var(--primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:.03em;">Pensión Ley 73 — Art. 167</h4>
+    <p class="text-sm">El cálculo se compone de cinco pasos secuenciales:</p>
+    <ol style="margin:10px 0 16px 24px;font-size:13.5px;line-height:1.7;">
+      <li><strong>SBC promedio</strong>: salario diario promedio de las últimas 250 semanas, mensualizado (× 30.4). Tope: 25 UMA diarias = $2,932.75/día.</li>
+      <li><strong>Cuantía básica</strong>: SBC × % de la tabla del Art. 167 (según veces UMA).</li>
+      <li><strong>Incrementos</strong>: SBC × % incremento anual × (semanas cotizadas − 500) / 52.</li>
+      <li><strong>Pensión base anual</strong> = cuantía básica + incrementos.</li>
+      <li><strong>Pensión final</strong> = base × factor edad (Art. 171: 0.75 a 60, ..., 1.00 a 65) × (1 + asignaciones) × factor Fox (1.11 si aplica). Piso: PMG vigente.</li>
+    </ol>
+
+    <h4 style="font-size:13px;color:var(--primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:.03em;">Modalidad 40 — Continuación voluntaria (Art. 218 LSS)</h4>
+    <ul style="margin:10px 0 16px 24px;font-size:13.5px;line-height:1.7;">
+      <li>Cuota mensual = SBC × % cuota del año (escalonado 2023→2030).</li>
+      <li>Reemplaza salarios bajos de las últimas 250 semanas → eleva el SBC promedio.</li>
+      <li>Cada mes en M40 aporta ~4.33 semanas (52/12) al conteo.</li>
+    </ul>
+
+    <h4 style="font-size:13px;color:var(--primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:.03em;">M40 Retroactiva — Art. 287 LSS</h4>
+    <p class="text-sm">Permite pagar periodos pasados sin cotizar. Para cada mes de adeudo: cuota base + recargo de 2.07% mensual acumulable desde el periodo hasta hoy (recargo lineal por mes transcurrido).</p>
+
+    <h4 style="font-size:13px;color:var(--primary);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.03em;">Financiamiento (sistema francés)</h4>
+    <p class="text-sm">Mensualidad = K · [ i·(1+i)^n / ((1+i)^n−1) ], donde K es el capital total financiado (capital + comisión apertura), i la tasa mensual y n el plazo. El CAT se aproxima resolviendo la TIR del flujo (búsqueda binaria).</p>
+
+    <h4 style="font-size:13px;color:var(--primary);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.03em;">Ley 97 — Cuenta individual (Art. 159 LSS Ley 97)</h4>
+    <p class="text-sm">Pensión = saldo AFORE convertido en renta. Retiro programado: anualidad finita sobre esperanza de vida. Renta vitalicia: prima a aseguradora ≈ 85% del retiro programado. Piso PMG Ley 97 $7,811.68.</p>
+
+    <h4 style="font-size:13px;color:var(--primary);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.03em;">Cita normativa</h4>
+    <ul style="margin:10px 0 16px 24px;font-size:13px;line-height:1.7;">
+      <li><strong>LSS 1973:</strong> Arts. 138 (semanas mínimas), 145, 164–166 (asignaciones), 167 (cuantía y tabla), 168 (PMG), 169–171 (factor edad CEAV), 218 (M40), 287 (recargos).</li>
+      <li><strong>LSS 1997:</strong> Arts. 154–157 (cesantía), 158–162 (vejez), 218 (modalidad 40), Arts. Transitorios.</li>
+      <li><strong>Decreto Fox</strong>, DOF 1/jul/2004 — factor 1.11 sobre pensión Ley 73.</li>
+      <li><strong>Decreto UMA</strong>, DOF 27/ene/2016 — sustitución de SMG por UMA.</li>
+      <li><strong>Jurisprudencia 2a./J. 85/2010</strong> (SCJN) — aplicación del factor Fox.</li>
+      <li><strong>Jurisprudencia 2a./J. 26/2017</strong> — tope SBC para cálculo de pensión: 25 UMA (no 25 SMG).</li>
+    </ul>
+  `;
+}
+
+
+function renderSupuestos() {
+  const grid = $("#param-grid");
+  if (!grid) return;
+  const items = [
+    { k: "UMA_DIARIA", label: "UMA diaria 2026", val: P.UMA_DIARIA, tag: "oficial", source: "INEGI feb-2026" },
+    { k: "DIAS_MES", label: "Días mes promedio", val: P.DIAS_MES, tag: "oficial", source: "IMSS" },
+    { k: "TOPE_UMA_M40", label: "Tope SBC (UMAs)", val: P.TOPE_UMA_M40, tag: "oficial", source: "Art. 28 LSS" },
+    { k: "PMG_LEY73", label: "PMG Ley 73 mensual", val: P.PMG_LEY73, tag: "oficial", source: "SHCP 2026" },
+    { k: "PMG_LEY97", label: "PMG Ley 97 mensual", val: P.PMG_LEY97, tag: "oficial", source: "SHCP 2026" },
+    { k: "FACTOR_FOX", label: "Factor Fox", val: P.FACTOR_FOX, tag: "oficial", source: "Decreto Fox 2004" },
+    { k: "RECARGO_MENSUAL", label: "Recargo M40 retro (%/mes)", val: P.RECARGO_MENSUAL*100, tag: "oficial", source: "Art. 287 LSS", mult: 0.01 },
+    { k: "TASA_DESCUENTO_VPN", label: "Tasa descuento VPN (%)", val: P.TASA_DESCUENTO_VPN*100, tag: "editable", source: "Modelo", mult: 0.01 },
+    { k: "CRECIM_UMA_ANUAL", label: "Crecim. UMA anual (%)", val: P.CRECIM_UMA_ANUAL*100, tag: "editable", source: "Modelo", mult: 0.01 },
+    { k: "TASA_AFORE_REAL", label: "Rend. real AFORE (%)", val: P.TASA_AFORE_REAL*100, tag: "estimado", source: "CONSAR hist.", mult: 0.01 },
+  ];
+  // factores edad
+  for (let e = 60; e <= 65; e++) {
+    items.push({ k: "FACTOR_EDAD_"+e, label: `Factor edad ${e}`, val: P.FACTOR_EDAD[e], tag: "oficial", source: "Art. 171 LSS 73" });
+  }
+  // cuotas M40
+  for (let a = 2023; a <= 2030; a++) {
+    items.push({ k: "CUOTA_M40_"+a, label: `Cuota M40 ${a} (%)`, val: P.CUOTAS_M40[a], tag: "oficial", source: "Reforma 2022 LSS" });
+  }
+  // Esperanza vida
+  Object.entries(P.ESPERANZA).forEach(([k,v]) => {
+    items.push({ k: "ESPERANZA_"+k, label: `Esperanza vida ${k}`, val: v, tag: "oficial", source: "CONAPO 2024-26" });
+  });
+  // financieras
+  P.FINANCIERAS.forEach((f, idx) => {
+    items.push({ k: "FIN_TASA_"+idx, label: `Tasa ${f.nombre} (%)`, val: f.tasaAnual, tag: "editable", source: "Cotización" });
+    items.push({ k: "FIN_COM_"+idx, label: `Comisión ${f.nombre} (%)`, val: f.comAperturaPct, tag: "editable", source: "Cotización" });
+  });
+
+  grid.innerHTML = items.map(it => `
+    <div class="field">
+      <label>${it.label} <span class="tag tag-${it.tag}" style="font-size:9px;">${it.tag}</span></label>
+      <input class="input mono small" type="number" step="0.001" data-param="${it.k}" value="${it.val}">
+      <span class="hint">${it.source}</span>
+    </div>
+  `).join("");
+}
+
+function aplicarSupuestos() {
+  $$("#param-grid [data-param]").forEach(inp => {
+    const k = inp.dataset.param;
+    const v = parseFloat(inp.value);
+    if (!isFinite(v)) return;
+    if (k === "UMA_DIARIA") P.UMA_DIARIA = v;
+    else if (k === "DIAS_MES") P.DIAS_MES = v;
+    else if (k === "TOPE_UMA_M40") P.TOPE_UMA_M40 = v;
+    else if (k === "PMG_LEY73") P.PMG_LEY73 = v;
+    else if (k === "PMG_LEY97") P.PMG_LEY97 = v;
+    else if (k === "FACTOR_FOX") P.FACTOR_FOX = v;
+    else if (k === "RECARGO_MENSUAL") P.RECARGO_MENSUAL = v/100;
+    else if (k === "TASA_DESCUENTO_VPN") P.TASA_DESCUENTO_VPN = v/100;
+    else if (k === "CRECIM_UMA_ANUAL") P.CRECIM_UMA_ANUAL = v/100;
+    else if (k === "TASA_AFORE_REAL") P.TASA_AFORE_REAL = v/100;
+    else if (k.startsWith("FACTOR_EDAD_")) P.FACTOR_EDAD[+k.slice(12)] = v;
+    else if (k.startsWith("CUOTA_M40_")) P.CUOTAS_M40[+k.slice(10)] = v;
+    else if (k.startsWith("ESPERANZA_")) P.ESPERANZA[k.slice(10)] = v;
+    else if (k.startsWith("FIN_TASA_")) P.FINANCIERAS[+k.slice(9)].tasaAnual = v;
+    else if (k.startsWith("FIN_COM_")) P.FINANCIERAS[+k.slice(8)].comAperturaPct = v;
+  });
+  recalcular();
+}
+
+function resetSupuestos() {
+  // Restaurar valores oficiales
+  P.UMA_DIARIA = 117.31;
+  P.DIAS_MES = 30.4;
+  P.TOPE_UMA_M40 = 25;
+  P.PMG_LEY73 = 10636.54;
+  P.PMG_LEY97 = 7811.68;
+  P.FACTOR_FOX = 1.11;
+  P.RECARGO_MENSUAL = 0.0207;
+  P.TASA_DESCUENTO_VPN = 0.05;
+  P.CRECIM_UMA_ANUAL = 0.045;
+  P.TASA_AFORE_REAL = 0.04;
+  P.FACTOR_EDAD = { 60: 0.75, 61: 0.80, 62: 0.85, 63: 0.90, 64: 0.95, 65: 1.00 };
+  P.CUOTAS_M40 = { 2023: 11.166, 2024: 12.257, 2025: 13.347, 2026: 14.438, 2027: 15.529, 2028: 16.620, 2029: 17.711, 2030: 18.800 };
+  P.ESPERANZA = { H60: 22.5, M60: 26.3, H65: 18.7, M65: 21.9 };
+  P.FINANCIERAS = [
+    { id: "BANORTE", nombre: "Banorte", tasaAnual: 40.0, comAperturaPct: 3.0, color: "#EB0028" },
+    { id: "BBVA", nombre: "BBVA", tasaAnual: 38.0, comAperturaPct: 2.5, color: "#004481" },
+    { id: "SANTANDER", nombre: "Santander", tasaAnual: 42.0, comAperturaPct: 3.5, color: "#EC0000" },
+  ];
+  renderSupuestos();
+  recalcular();
+}
+
+/* =================================================================
+   12. RENDER DE GRÁFICAS (Chart.js)
+   ================================================================= */
+
+function destroyChart(key) {
+  if (appState.charts[key]) { appState.charts[key].destroy(); delete appState.charts[key]; }
+}
+function isDark() { return document.body.dataset.theme === "dark"; }
+function chartColors() {
+  return {
+    text: isDark() ? "#A3AEC5" : "#5E6A82",
+    grid: isDark() ? "#243661" : "#DDE3EE",
+    primary: "#1F3864",
+    accent: "#2E75B6",
+    success: "#548235",
+    warn: "#B07F11",
+    danger: "#C00000",
+    yellow: "#FFC000",
+  };
+}
+function baseOpts(extra = {}) {
+  const c = chartColors();
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: c.text, font: { size: 11 } } },
+      tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: $${(ctx.parsed.y ?? ctx.parsed).toLocaleString("es-MX",{maximumFractionDigits:2})}` } }
+    },
+    scales: {
+      x: { ticks: { color: c.text, font: { size: 10 } }, grid: { color: c.grid } },
+      y: { ticks: { color: c.text, font: { size: 10 }, callback: v => "$" + (v/1000).toFixed(0) + "k" }, grid: { color: c.grid } }
+    },
+    ...extra
+  };
+}
+
+function renderCharts(r) {
+  const c = chartColors();
+
+  // Gráfica edades — pensión mensual
+  destroyChart("edPension");
+  appState.charts.edPension = new Chart($("#ch-edades-pension"), {
+    type: "bar",
+    data: {
+      labels: r.tablaEdades.map(f => `${f.edad} a`),
+      datasets: [{ label: "Pensión mensual", data: r.tablaEdades.map(f => f.pensionMens), backgroundColor: c.primary }]
+    },
+    options: baseOpts()
+  });
+
+  // Edades — costo de esperar
+  destroyChart("edCosto");
+  appState.charts.edCosto = new Chart($("#ch-edades-costo"), {
+    type: "line",
+    data: {
+      labels: r.tablaEdades.map(f => `${f.edad}`),
+      datasets: [{ label: "Costo acumulado de esperar", data: r.tablaEdades.map(f => f.costoEsperar), borderColor: c.danger, backgroundColor: c.danger+"22", fill: true, tension: .3 }]
+    },
+    options: baseOpts()
+  });
+
+  // Edades — recuperar
+  destroyChart("edRec");
+  appState.charts.edRec = new Chart($("#ch-edades-recuperar"), {
+    type: "bar",
+    data: {
+      labels: r.tablaEdades.map(f => `${f.edad}`),
+      datasets: [{
+        label: "Meses para recuperar el costo de esperar",
+        data: r.tablaEdades.map(f => isFinite(f.mesesRecuperar) ? Math.min(f.mesesRecuperar, 360) : 360),
+        backgroundColor: r.tablaEdades.map(f => f.mesesRecuperar < 36 ? c.success : f.mesesRecuperar < 120 ? c.warn : c.danger)
+      }]
+    },
+    options: baseOpts({ scales: { x: { ticks: { color: c.text } }, y: { ticks: { color: c.text, callback: v => v+"m" } } } })
+  });
+
+  // Oportunidad — cruce
+  destroyChart("opoCruce");
+  appState.charts.opoCruce = new Chart($("#ch-opo-cruce"), {
+    type: "line",
+    data: {
+      labels: r.opo.flujo.map(f => "Año "+f.anio),
+      datasets: [
+        { label: "Retirarse a 60 (acumulado)", data: r.opo.flujo.map(f => f.cumA), borderColor: c.accent, fill: false, tension: .2 },
+        { label: `Esperar a ${r.opo.filaB.edad} (acumulado)`, data: r.opo.flujo.map(f => f.cumB), borderColor: c.success, fill: false, tension: .2 }
+      ]
+    },
+    options: baseOpts()
+  });
+
+  // Oportunidad mensual
+  destroyChart("opoMens");
+  appState.charts.opoMens = new Chart($("#ch-opo-mensual"), {
+    type: "bar",
+    data: {
+      labels: ["Retirarse a 60", `Esperar a ${r.opo.filaB.edad}`],
+      datasets: [{
+        label: "Pensión mensual",
+        data: [r.opo.filaA.pensionMens, r.opo.filaB.pensionMens],
+        backgroundColor: [c.accent, c.success]
+      }]
+    },
+    options: baseOpts()
+  });
+
+  if (r.m40Prosp) {
+    destroyChart("m40Anual");
+    appState.charts.m40Anual = new Chart($("#ch-m40p-anual"), {
+      type: "bar",
+      data: {
+        labels: r.m40Prosp.detallePorAnio.map(d => d.anio),
+        datasets: [{ label: "Costo anual M40", data: r.m40Prosp.detallePorAnio.map(d => d.costoAnual), backgroundColor: c.warn }]
+      },
+      options: baseOpts()
+    });
+    destroyChart("m40Acum");
+    appState.charts.m40Acum = new Chart($("#ch-m40p-acum"), {
+      type: "line",
+      data: {
+        labels: r.m40Prosp.detallePorAnio.map(d => d.anio),
+        datasets: [{ label: "Costo acumulado", data: r.m40Prosp.detallePorAnio.map(d => d.acumulado), borderColor: c.primary, backgroundColor: c.primary+"33", fill: true, tension: .3 }]
+      },
+      options: baseOpts()
+    });
+    destroyChart("m40Comp");
+    appState.charts.m40Comp = new Chart($("#ch-m40p-comp"), {
+      type: "bar",
+      data: {
+        labels: ["Sin M40", "Con M40"],
+        datasets: [{ label: "Pensión mensual", data: [r.calcL73.pensionFinal, r.calcL73ConProsp.pensionFinal], backgroundColor: [c.accent, c.success] }]
+      },
+      options: baseOpts()
+    });
+  }
+
+  if (r.m40Retro) {
+    destroyChart("retroBars");
+    appState.charts.retroBars = new Chart($("#ch-retro-bars"), {
+      type: "bar",
+      data: {
+        labels: ["Cuota base total", "Recargo total"],
+        datasets: [{ label: "Monto", data: [r.m40Retro.totalSinRecargo, r.m40Retro.recargoTotal], backgroundColor: [c.accent, c.danger] }]
+      },
+      options: baseOpts()
+    });
+    destroyChart("retroAcum");
+    appState.charts.retroAcum = new Chart($("#ch-retro-acum"), {
+      type: "line",
+      data: {
+        labels: r.m40Retro.detalle.filter((_,i)=>i%6===0).map(d => "M"+d.idx),
+        datasets: [{ label: "Acumulado", data: r.m40Retro.detalle.filter((_,i)=>i%6===0).map(d => d.acumulado), borderColor: c.danger, backgroundColor: c.danger+"22", fill: true, tension: .3 }]
+      },
+      options: baseOpts()
+    });
+  }
+
+  // Financiamiento
+  destroyChart("finMens");
+  appState.charts.finMens = new Chart($("#ch-fin-mensualidad"), {
+    type: "bar",
+    data: {
+      labels: r.creditos.map(c => c.nombre),
+      datasets: [{ label: "Mensualidad", data: r.creditos.map(c => c.credito.mensualidad), backgroundColor: r.creditos.map(x => x.color) }]
+    },
+    options: baseOpts()
+  });
+  destroyChart("finInt");
+  appState.charts.finInt = new Chart($("#ch-fin-intereses"), {
+    type: "bar",
+    data: {
+      labels: r.creditos.map(c => c.nombre),
+      datasets: [{ label: "Intereses totales", data: r.creditos.map(c => c.credito.interesesTotales), backgroundColor: r.creditos.map(x => x.color) }]
+    },
+    options: baseOpts()
+  });
+
+  // Ley 97 comparativa
+  destroyChart("l97");
+  appState.charts.l97 = new Chart($("#ch-ley97"), {
+    type: "bar",
+    data: {
+      labels: ["Ley 73 base", "Ley 97 Retiro prog.", "Ley 97 Renta vit.", "PMG Ley 73", "PMG Ley 97"],
+      datasets: [{
+        label: "Pensión mensual",
+        data: [r.calcL73.pensionFinal, r.calcL97.pagoMensRetiroProg, r.calcL97.rentaVitaliciaMens, P.PMG_LEY73, P.PMG_LEY97],
+        backgroundColor: [c.primary, c.accent, c.success, c.warn, c.danger]
+      }]
+    },
+    options: baseOpts()
+  });
+
+  // Resumen — pensión
+  destroyChart("rPension");
+  appState.charts.rPension = new Chart($("#ch-resumen-pension"), {
+    type: "bar",
+    data: {
+      labels: r.opciones.map(o => o.nombre),
+      datasets: [{ label: "Pensión mensual", data: r.opciones.map(o => o.pensionMens), backgroundColor: r.opciones.map((_,i) => i===0?c.success:i<3?c.accent:c.primary) }]
+    },
+    options: baseOpts({ indexAxis: 'y', scales: { x: { ticks: { color: c.text, callback: v=>"$"+(v/1000).toFixed(0)+"k" } }, y: { ticks: { color: c.text, font:{ size: 10 }} } } })
+  });
+  // Resumen — flujo 20
+  destroyChart("rFlujo");
+  appState.charts.rFlujo = new Chart($("#ch-resumen-flujo"), {
+    type: "bar",
+    data: {
+      labels: r.opciones.map(o => o.nombre),
+      datasets: [{ label: "Flujo neto a 20 años", data: r.opciones.map(o => o.flujo20), backgroundColor: r.opciones.map(o => o.flujo20>0?c.success:c.danger) }]
+    },
+    options: baseOpts({ indexAxis: 'y' })
+  });
+
+  // Radar — top 4
+  const top4 = r.opciones.slice(0,4);
+  const maxVals = {
+    pension: Math.max(...r.opciones.map(o => o.pensionMens)),
+    flujo20: Math.max(...r.opciones.map(o => Math.max(0,o.flujo20))),
+    score: 100,
+    bajaInv: Math.max(...r.opciones.map(o => o.inversionInicial || 0)) || 1,
+    bajaRec: Math.max(...r.opciones.map(o => isFinite(o.mesesRecuperar) ? o.mesesRecuperar : 200)) || 1,
+  };
+  destroyChart("rRadar");
+  appState.charts.rRadar = new Chart($("#ch-resumen-radar"), {
+    type: "radar",
+    data: {
+      labels: ["Pensión mens", "Flujo 20a", "Score", "Baja inversión", "Recuperación rápida"],
+      datasets: top4.map((o, idx) => ({
+        label: o.nombre,
+        data: [
+          (o.pensionMens / maxVals.pension) * 100,
+          (Math.max(0, o.flujo20) / maxVals.flujo20) * 100,
+          o.score,
+          (1 - (o.inversionInicial || 0) / maxVals.bajaInv) * 100,
+          (1 - (isFinite(o.mesesRecuperar)?o.mesesRecuperar:200) / maxVals.bajaRec) * 100,
+        ],
+        backgroundColor: [c.success+"33", c.accent+"33", c.warn+"33", c.danger+"33"][idx],
+        borderColor: [c.success, c.accent, c.warn, c.danger][idx],
+        borderWidth: 2,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: c.text, font: { size: 10 } } } },
+      scales: { r: { angleLines: { color: c.grid }, grid: { color: c.grid }, pointLabels: { color: c.text, font: { size: 10 } }, ticks: { color: c.text, backdropColor: "transparent", font: { size: 9 } }, suggestedMin: 0, suggestedMax: 100 } }
+    }
+  });
+}
+
+/* =================================================================
+   14. EXPORTACIÓN
+   ================================================================= */
+
+function exportJSON() {
+  const r = appState.resultado;
+  if (!r) { alert("Recalcula primero."); return; }
+  const data = {
+    fecha: new Date().toISOString(),
+    version: P.FECHA_MODELO,
+    input: r.input,
+    constantes: { ...P },
+    regimen: r.regimen,
+    pensionLey73: r.calcL73,
+    pensionLey97: r.calcL97,
+    m40Prospectiva: r.m40Prosp,
+    pensionConProsp: r.calcL73ConProsp,
+    m40Retroactiva: r.m40Retro ? { ...r.m40Retro, detalle: r.m40Retro.detalle.slice(0, 30) } : null,
+    pensionConRetro: r.calcL73ConRetro,
+    creditos: r.creditos.map(c => ({ ...c, credito: { ...c.credito, tabla: c.credito.tabla.slice(0,12) } })),
+    tablaEdades: r.tablaEdades,
+    costoOportunidad: r.opo,
+    resumenMaestro: r.opciones,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `calculadora_imss_${(r.input.nombre||"usuario").replace(/\s+/g,"_")}_${Date.now()}.json`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function exportCSV() {
+  const r = appState.resultado;
+  if (!r) return alert("Recalcula primero.");
+  function tblToCSV(rows) {
+    return rows.map(row => row.map(c => {
+      if (c === null || c === undefined) return "";
+      const s = String(c).replace(/"/g, '""');
+      return /[,\n";]/.test(s) ? `"${s}"` : s;
+    }).join(",")).join("\n");
+  }
+  let csv = "Calculadora IMSS — Tablas exportadas\n";
+  csv += "Fecha exportación," + new Date().toLocaleString("es-MX") + "\n\n";
+
+  csv += "RESUMEN MAESTRO\n";
+  csv += tblToCSV([
+    ["Opción","Pensión mens","Pensión anual","Semanas","SBC prom","Inv inicial","Mensualidad","Costo finan","Costo opo","Meses recup","Flujo 10","Flujo 20","Flujo 25","Riesgo","Complej","Liquidez","Score"],
+    ...r.opciones.map(o => [o.nombre, o.pensionMens.toFixed(2), (o.pensionMens*12).toFixed(2), o.semanas, o.sbcProm.toFixed(2), o.inversionInicial.toFixed(2), o.mensualidadAdicional.toFixed(2), o.costoFinanciero.toFixed(2), (o.costoOportunidad||0).toFixed(2), isFinite(o.mesesRecuperar)?o.mesesRecuperar.toFixed(1):"inf", o.flujo10.toFixed(2), o.flujo20.toFixed(2), o.flujo25.toFixed(2), o.riesgo, o.complejidad, o.liquidez, o.score])
+  ]);
+  csv += "\n\nEDADES 60-65\n";
+  csv += tblToCSV([
+    ["Edad","Semanas","SBC prom","Pensión mens","Pensión anual","PMG","Costo esperar","Mejora","Meses recuperar"],
+    ...r.tablaEdades.map(f => [f.edad, f.semanas, f.sbcProm.toFixed(2), f.pensionMens.toFixed(2), f.pensionAnual.toFixed(2), f.aplicoPMG?"Sí":"No", f.costoEsperar.toFixed(2), f.mejoraMarginal.toFixed(2), isFinite(f.mesesRecuperar)?f.mesesRecuperar.toFixed(1):"inf"])
+  ]);
+  csv += "\n\nCOSTO OPORTUNIDAD\n";
+  csv += tblToCSV([
+    ["Año","Edad","Cum retiro 60","Cum esperar","Diferencia"],
+    ...r.opo.flujo.map(f => [f.anio, f.edad, f.cumA.toFixed(2), f.cumB.toFixed(2), f.diffAcum.toFixed(2)])
+  ]);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `calculadora_imss_${Date.now()}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function exportPDF() {
+  // Vía print (más fiable y respeta el CSS @media print)
+  window.print();
+}
+
+/* =================================================================
+   15. EVENTOS UI
+   ================================================================= */
+
+function setupTabs() {
+  $$(".dropzone-tabs button").forEach(b => {
+    b.addEventListener("click", () => {
+      $$(".dropzone-tabs button").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      const tab = b.dataset.tab;
+      ["pdf","img","txt"].forEach(t => $("#tab-"+t).classList.toggle("hidden", t !== tab));
+    });
+  });
+}
+
+function setupDropzones() {
+  function bindDZ(elId, inputId, handler) {
+    const dz = $("#"+elId), inp = $("#"+inputId);
+    dz.addEventListener("click", () => inp.click());
+    dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("dragover"); });
+    dz.addEventListener("dragleave", () => dz.classList.remove("dragover"));
+    dz.addEventListener("drop", e => {
+      e.preventDefault(); dz.classList.remove("dragover");
+      const f = e.dataTransfer.files[0]; if (f) handler(f);
+    });
+    inp.addEventListener("change", e => {
+      const f = e.target.files[0]; if (f) handler(f);
+    });
+  }
+  bindDZ("dz-pdf", "file-pdf", procesarPDF);
+  bindDZ("dz-img", "file-img", procesarImagen);
+  $("#btn-parse-txt").addEventListener("click", () => {
+    const t = $("#txt-paste").value;
+    if (t.trim().length < 20) { alert("Pega al menos 20 caracteres de la constancia."); return; }
+    procesarTexto(t);
+  });
+  $("#btn-aplicar-detec").addEventListener("click", aplicarDetectados);
+  $("#btn-cancelar-detec").addEventListener("click", () => $("#parse-result").classList.add("hidden"));
+}
+
+function setupTheme() {
+  $("#btn-theme").addEventListener("click", () => {
+    const cur = document.body.dataset.theme;
+    document.body.dataset.theme = cur === "dark" ? "light" : "dark";
+    try { sessionStorage.setItem("imss-theme", document.body.dataset.theme); } catch(e){}
+    if (appState.resultado) renderCharts(appState.resultado);
+  });
+  try {
+    const saved = sessionStorage.getItem("imss-theme");
+    if (saved) document.body.dataset.theme = saved;
+  } catch(e){}
+}
+
+function setupNav() {
+  const sections = $$("[id^='sec-']");
+  const links = $$("#sidenav a");
+  // Click → scroll
+  links.forEach(a => a.addEventListener("click", (e) => {
+    const id = a.dataset.target;
+    const el = document.getElementById(id);
+    if (el) { e.preventDefault(); el.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  }));
+  // Observer
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting) {
+        const id = en.target.id;
+        links.forEach(a => a.classList.toggle("active", a.dataset.target === id));
+      }
+    });
+  }, { rootMargin: "-30% 0px -60% 0px", threshold: 0 });
+  sections.forEach(s => obs.observe(s));
+}
+
+function setupForm() {
+  // Recalcular al cambiar cualquier input
+  $$("#sec-datos input, #sec-datos select, #sec-m40-prosp input, #sec-m40-retro input, #sec-financia input, #sec-oportunidad input, #sec-oportunidad select").forEach(el => {
+    el.addEventListener("change", recalcular);
+    el.addEventListener("input", debounce(recalcular, 350));
+  });
+  // SBC mensual hint
+  $("#i-sbcDiario").addEventListener("input", () => {
+    const sbcD = parseFloat($("#i-sbcDiario").value) || 0;
+    $("#hint-sbcMensual").textContent = `= $${fmt(sbcD * P.DIAS_MES, 2)} mensual`;
+  });
+  $("#i-fechaNac").addEventListener("change", () => {
+    const d = parseDateMX($("#i-fechaNac").value);
+    if (d) $("#i-edadActual").value = edadEnFecha(d);
+  });
+  // financieras editables
+  document.addEventListener("input", (e) => {
+    const t = e.target;
+    if (t.dataset.finTasa !== undefined) {
+      P.FINANCIERAS[+t.dataset.finTasa].tasaAnual = parseFloat(t.value) || 0;
+      debouncedRecalc();
+    } else if (t.dataset.finCom !== undefined) {
+      P.FINANCIERAS[+t.dataset.finCom].comAperturaPct = parseFloat(t.value) || 0;
+      debouncedRecalc();
+    }
+  });
+}
+
+function debounce(fn, wait) {
+  let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+const debouncedRecalc = debounce(recalcular, 400);
+
+function setupButtons() {
+  $("#btn-demo").addEventListener("click", cargarDemo);
+  $("#btn-recalc").addEventListener("click", recalcular);
+  $("#btn-print").addEventListener("click", () => window.print());
+  $("#btn-export-pdf").addEventListener("click", exportPDF);
+  $("#btn-export-json").addEventListener("click", exportJSON);
+  $("#btn-export-csv").addEventListener("click", exportCSV);
+  $("#btn-aplicar-supuestos").addEventListener("click", aplicarSupuestos);
+  $("#btn-reset-supuestos").addEventListener("click", resetSupuestos);
+}
+
+/* =================================================================
+   DEMO
+   ================================================================= */
+function cargarDemo() {
+  $("#i-nombre").value = "Eduardo Carrillo Reyna (DEMO)";
+  $("#i-nss").value = "12345678901";
+  $("#i-curp").value = "CARE680510HDFRRD08";
+  $("#i-fechaNac").value = "1968-05-10";
+  $("#i-edadActual").value = 58;
+  $("#i-edadRetiro").value = 65;
+  $("#i-primeraAlta").value = "1988-09-01";
+  $("#i-semanas").value = 1620;
+  $("#i-sbcDiario").value = 920;
+  $("#i-estadoCivil").value = "casado";
+  $("#i-hijos").value = 0;
+  $("#i-ayudaAsist").checked = false;
+  $("#i-fox").checked = true;
+  $("#i-sigueCotiz").checked = true;
+  $("#i-afore").value = 950000;
+  $("#i-aporteAfore").value = 7500;
+  $("#i-capitalDispo").value = 350000;
+  $("#i-salM40").value = 89167;
+  $("#i-mesesM40").value = 60;
+  $("#i-anioInicio").value = 2026;
+  $("#i-salRetro").value = 89167;
+  $("#i-pctRetro").value = 13.347;
+  $("#i-edadAlt").value = 65;
+  $("#i-horizonte").value = 25;
+  $("#i-capitalFin").value = 0;
+  $("#i-plazoFin").value = 60;
+  // Brechas demo
+  appState.brechasSeleccionadas = [
+    { desde: new Date(1995, 0, 1), hasta: new Date(1996, 6, 1), meses: 18, elegible: true },
+    { desde: new Date(2005, 3, 1), hasta: new Date(2006, 1, 1), meses: 10, elegible: true },
+  ];
+  // SBC mensual hint
+  $("#hint-sbcMensual").textContent = `= $${fmt(920 * P.DIAS_MES, 2)} mensual`;
+  $("#hint-topeM40").textContent = `Tope 25 UMA = $${fmt(tope_m40_mensual(), 2)}`;
+  recalcular();
+}
+
+/* =================================================================
+   INICIALIZACIÓN
+   ================================================================= */
+window.addEventListener("DOMContentLoaded", () => {
+  setupTabs();
+  setupDropzones();
+  setupTheme();
+  setupNav();
+  setupForm();
+  setupButtons();
+  renderSupuestos();
+  $("#hint-topeM40").textContent = `Tope 25 UMA = $${fmt(tope_m40_mensual(), 2)}`;
+  $("#footer-version").textContent = P.FECHA_MODELO;
+  // Calcular con valores iniciales por defecto
+  recalcular();
+
+  // Pruebas (consola)
+  try {
+    const t = calcularPensionLey73({
+      salarioMensual: 25840, semanas: 1450, edadRetiro: 65,
+      estadoCivil: "soltero", numHijos: 0, ayudaAsist: false, aplicarFox: true
+    });
+    console.log("[Test] Pensión Ley 73 (Eduardo base) = $" + t.pensionFinal.toFixed(2),
+      "| veces UMA:", t.grupo.vecesUMA.toFixed(2), "| % CB:", t.grupo.cuantiaBasica);
+    const tope = calcularPensionLey73({
+      salarioMensual: tope_m40_mensual(), semanas: 1500, edadRetiro: 65,
+      estadoCivil: "casado", numHijos: 0, ayudaAsist: false, aplicarFox: true
+    });
+    console.log("[Test] Pensión Ley 73 con tope 25 UMA = $" + tope.pensionFinal.toFixed(2));
+  } catch(e) { console.error(e); }
+});
+</script>
+</body>
+</html>
